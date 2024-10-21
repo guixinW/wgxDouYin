@@ -11,5 +11,5 @@ JWT:
   signingKey: "signingKey"
 
 etcd:
-  host: 0.0.0.0
+  host: 10.21.29.203
   port: 2379

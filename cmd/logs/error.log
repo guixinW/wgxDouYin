@@ -1,0 +1,17 @@
+2024-10-18T16:54:58.128+0800	FATAL	user/main.go:32	context deadline exceeded
+2024-10-21T16:16:03.305+0800	FATAL	db/init.go:53	Error 1050 (42S01): Table 'users' already exists
+2024-10-21T16:24:08.737+0800	FATAL	db/init.go:61	Error 1050 (42S01): Table 'users' already exists
+2024-10-21T16:26:26.265+0800	FATAL	db/init.go:62	Error 1050 (42S01): Table 'users' already exists
+2024-10-21T16:29:46.844+0800	FATAL	db/init.go:62	Error 1050 (42S01): Table 'users' already exists
+2024-10-21T16:33:43.815+0800	FATAL	db/init.go:62	Error 1050 (42S01): Table 'users' already exists
+2024-10-21T20:36:40.097+0800	ERROR	service/handler.go:24	Error 1146 (42S02): Table 'wgxTiktok.users' doesn't exist
+2024-10-21T20:38:19.200+0800	ERROR	service/handler.go:24	Error 1146 (42S02): Table 'wgxTiktok.users' doesn't exist
+2024-10-21T20:44:23.325+0800	ERROR	service/handler.go:24	Error 1146 (42S02): Table 'wgxTiktok.users' doesn't exist
+2024-10-21T20:47:57.462+0800	ERROR	service/handler.go:24	Error 1146 (42S02): Table 'wgxTiktok.users' doesn't exist
+2024-10-21T20:47:59.141+0800	ERROR	service/handler.go:24	Error 1146 (42S02): Table 'wgxTiktok.users' doesn't exist
+2024-10-21T20:48:00.089+0800	ERROR	service/handler.go:24	Error 1146 (42S02): Table 'wgxTiktok.users' doesn't exist
+2024-10-21T20:48:01.004+0800	ERROR	service/handler.go:24	Error 1146 (42S02): Table 'wgxTiktok.users' doesn't exist
+2024-10-21T20:48:01.854+0800	ERROR	service/handler.go:24	Error 1146 (42S02): Table 'wgxTiktok.users' doesn't exist
+2024-10-21T20:48:02.661+0800	ERROR	service/handler.go:24	Error 1146 (42S02): Table 'wgxTiktok.users' doesn't exist
+2024-10-21T20:48:03.470+0800	ERROR	service/handler.go:24	Error 1146 (42S02): Table 'wgxTiktok.users' doesn't exist
+2024-10-21T20:49:11.129+0800	ERROR	service/handler.go:31	该用户名已存在:123

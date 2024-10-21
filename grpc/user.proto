@@ -1,0 +1,73 @@
+syntax="proto3";
+option go_package="./user";
+package user;
+//import "user/"
+
+//  =========================用户注册============================
+message UserRegisterRequest{
+  // @gotags: json:"username" binding:"required,max=32" validate:"required,max=32"
+  string username = 1;
+  // @gotags: json:"password" binding:"required,max=32" validate:"required,max=32"
+  string password = 2;
+}
+
+message UserRegisterResponse{
+  // @gotags: json:"status_code"
+  int32 status_code = 1;
+  // @gotags: json:"status_msg"
+  string status_msg = 2;
+  // @gotags: json:"user_id"
+  int64 user_id = 3;
+  // @gotags: json:"token"
+  string token = 4;
+}
+
+//  =========================用户登录============================
+message UserLoginRequest {
+  // @gotags: json:"username" binding:"required,max=32" validate:"required,max=32"
+  string username = 1;
+  // @gotags: json:"password" binding:"required,max=32" validate:"required,max=32"
+  string password = 2;
+}
+message UserLoginResponse {
+  // @gotags: json:"status_code"
+  int32 status_code = 1;
+  // @gotags: json:"status_msg"
+  string status_msg = 2;
+  // @gotags: json:"user_id"
+  int64 user_id = 3;
+  // @gotags: json:"token"
+  string token = 4;
+}
+
+//  ==========================用户信息============================
+message User {
+  // @gotags: json:"id"
+  int64 id = 1;
+  // @gotags: json:"name"
+  string name = 2;
+  // @gotags: json:"following_count"
+  string following_count = 3;
+  // @gotags: json:"follower_count"
+  string follower_count = 4;
+
+}
+message UserInfoRequest {
+  // @gotags: json:"user_id" form:"user_id" validate:"required" binding:"required"
+  int64 user_id = 1;
+  // @gotags: json:"token" form:"token" binding:"required"
+  string token = 2;
+}
+message UserInfoResponse {
+  // @gotags: json:"status_code"
+  int32 status_code = 1;
+  // @gotags: json:"status_msg"
+  string status_msg = 2;
+  User user = 3;
+}
+
+service UserService{
+  rpc UserRegister(UserRegisterRequest) returns (UserRegisterResponse){}
+  rpc Login(UserLoginRequest) returns (UserLoginResponse){}
+  rpc UserInfo(UserInfoRequest) returns (UserInfoResponse){}
+}

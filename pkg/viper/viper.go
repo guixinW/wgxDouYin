@@ -15,6 +15,8 @@ func Init(configName string) Config {
 	v.SetConfigFile("yml")
 	v.SetConfigName(configName)
 	v.AddConfigPath("./config")
+	v.AddConfigPath("../config")
+	v.AddConfigPath("../../config")
 	if err := v.ReadInConfig(); err != nil {
 		log.Fatalf("error is %v", err)
 	}
