@@ -86,6 +86,6 @@ func (j *JWT) ParseToken(tokenString, serverName string) (*CustomClaims, error) 
 	return nil, ErrTokenInvalid
 }
 
-func TransferTimeToJwtTime(old time.Time) jwt.NumericDate {
-	return *jwt.NewNumericDate(old)
+func TransferTimeToJwtTime(old time.Time) *jwt.NumericDate {
+	return jwt.NewNumericDate(old)
 }

@@ -53,3 +53,5 @@
 2024-11-22T14:59:31.994+0800	INFO	etcd/register.go:85	start keepalive lease 3f3593528d3a2e10 for etcd register
 2024-11-22T14:59:52.501+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
 2024-11-22T14:59:53.390+0800	INFO	etcd/register.go:85	start keepalive lease 3f3593528d3a2e14 for etcd register
+2024-11-22T17:22:56.556+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
+2024-11-22T17:23:22.519+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!

@@ -19,8 +19,7 @@ var (
 		config.Viper.GetInt("server.port"))
 	etcdAddr = fmt.Sprintf("%s:%d", config.Viper.GetString("etcd.host"),
 		config.Viper.GetInt("etcd.port"))
-	signinKey = config.Viper.GetString("JWT.signinKey")
-	logger    = zap.InitLogger()
+	logger = zap.InitLogger()
 )
 
 func init() {
@@ -37,6 +36,10 @@ func main() {
 	r, err := etcd.NewServiceRegistry([]string{etcdAddr})
 	if err != nil {
 		logger.Fatalln(err.Error())
+	}
+	if r == nil {
+		logger.Fatalln("cant register service")
+		return
 	}
 	err = r.Register(serviceName, "127.0.0.1:8085")
 	if err != nil {

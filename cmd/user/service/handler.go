@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"time"
 	"wgxDouYin/dal/db"
 	"wgxDouYin/grpc/user"
 	pb "wgxDouYin/grpc/user"
 	"wgxDouYin/internal/tool"
+	"wgxDouYin/pkg/jwt"
 	"wgxDouYin/pkg/zap"
 )
 
@@ -71,5 +73,24 @@ func (s *UserServerImpl) UserLogin(ctx context.Context, req *user.UserLoginReque
 		}
 		return res, nil
 	}
-	return nil, nil
+	claims := jwt.CustomClaims{
+		UserId: uint64(usr.ID),
+	}
+	claims.ExpiresAt = jwt.TransferTimeToJwtTime(time.Now().Add(time.Hour * 1))
+	token, err := JWT.CreateToken(claims)
+	if err != nil {
+		logger.Errorf("发生错误:%v", err.Error())
+		res := &user.UserLoginResponse{
+			StatusCode: -1,
+			StatusMsg:  "服务器内部错误：token 创建失败",
+		}
+		return res, nil
+	}
+	res := &user.UserLoginResponse{
+		StatusCode: 0,
+		StatusMsg:  "success",
+		UserId:     int64(usr.ID),
+		Token:      token,
+	}
+	return res, nil
 }
