@@ -11,7 +11,7 @@ func TestLoadJWT(t *testing.T) {
 
 }
 
-func TestJWT(t *testing.T) {
+func TestParseJWT(t *testing.T) {
 	privateKey, publicKey, err := keys.CreateKeyPair()
 	if err != nil {
 		t.Fatalf("create key pairs err: %v", err)

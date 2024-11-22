@@ -1,9 +1,10 @@
 package jwt
 
 import (
-	"crypto/rsa"
+	"crypto/ecdsa"
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
+	"time"
 )
 
 var (
@@ -14,8 +15,8 @@ var (
 )
 
 type JWT struct {
-	serverToPublicKey map[string]*rsa.PublicKey
-	serverPrivateKey  *rsa.PrivateKey
+	serverToPublicKey map[string]*ecdsa.PublicKey
+	serverPrivateKey  *ecdsa.PrivateKey
 }
 
 // CustomClaims The member variables in CustomClaims need to be capitalized because jwt will deserialize them later.
@@ -26,12 +27,12 @@ type CustomClaims struct {
 
 // NewJWT generates a JWT for the given serverName.
 // It saves the private key and the corresponding public key associated with the serverName.
-func NewJWT(privateKey *rsa.PrivateKey, publicKey *rsa.PublicKey, serverName string) *JWT {
-	return &JWT{serverPrivateKey: privateKey, serverToPublicKey: map[string]*rsa.PublicKey{serverName: publicKey}}
+func NewJWT(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey, serverName string) *JWT {
+	return &JWT{serverPrivateKey: privateKey, serverToPublicKey: map[string]*ecdsa.PublicKey{serverName: publicKey}}
 }
 
 // getServerPublicKey retrieves the public key associated with specified service.
-func (j *JWT) getServerPublicKey(server string) (*rsa.PublicKey, error) {
+func (j *JWT) getServerPublicKey(server string) (*ecdsa.PublicKey, error) {
 	serverPublicKey, ok := j.serverToPublicKey[server]
 	if !ok {
 		return nil, errors.New("can't find server's public key")
@@ -40,7 +41,7 @@ func (j *JWT) getServerPublicKey(server string) (*rsa.PublicKey, error) {
 }
 
 // addServerPublicKey saves the public key associated with specified service.
-func (j *JWT) addServerPublicKey(serverName string, serverPublicKey *rsa.PublicKey) error {
+func (j *JWT) addServerPublicKey(serverName string, serverPublicKey *ecdsa.PublicKey) error {
 	if j == nil {
 		return errors.New("JWT is nil object")
 	}
@@ -50,14 +51,14 @@ func (j *JWT) addServerPublicKey(serverName string, serverPublicKey *rsa.PublicK
 
 // CreateToken creates a jwt by userid
 func (j *JWT) CreateToken(claims CustomClaims) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
 	return token.SignedString(j.serverPrivateKey)
 }
 
 // ParseToken parses a token by the public key of the corresponding service.
 func (j *JWT) ParseToken(tokenString, serverName string) (*CustomClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
 			return nil, ErrTokenInvalid
 		}
 		if serverPublicKey, err := j.getServerPublicKey(serverName); err != nil {
@@ -83,4 +84,8 @@ func (j *JWT) ParseToken(tokenString, serverName string) (*CustomClaims, error) 
 		return claims, nil
 	}
 	return nil, ErrTokenInvalid
+}
+
+func TransferTimeToJwtTime(old time.Time) jwt.NumericDate {
+	return *jwt.NewNumericDate(old)
 }

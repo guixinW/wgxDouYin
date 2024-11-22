@@ -13,8 +13,8 @@ func init() {
 	InitUser(&userConfig)
 }
 
-func initClient(serviceName, scheme string, client interface{}) {
-	conn, err := connectServer(serviceName, scheme)
+func initClient(scheme, serviceName string, client interface{}) {
+	conn, err := connectServer(scheme, serviceName)
 	if err != nil {
 		panic(err)
 	}
@@ -26,7 +26,7 @@ func initClient(serviceName, scheme string, client interface{}) {
 	}
 }
 
-func connectServer(serviceName, scheme string) (conn *grpc.ClientConn, err error) {
+func connectServer(scheme, serviceName string) (conn *grpc.ClientConn, err error) {
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}

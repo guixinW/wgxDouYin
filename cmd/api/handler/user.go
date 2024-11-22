@@ -12,6 +12,7 @@ import (
 func UserRegister(c *gin.Context) {
 	userName := c.Query("username")
 	password := c.Query("password")
+
 	if len(userName) == 0 || len(password) == 0 {
 		c.JSON(http.StatusBadRequest, response.Register{
 			Base: response.Base{

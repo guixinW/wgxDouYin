@@ -22,7 +22,7 @@ func InitRouter() *gin.Engine {
 	{
 		user := v1.Group("/user")
 		{
-			user.GET("/register/", handler.UserRegister)
+			user.POST("/register/", handler.UserRegister)
 		}
 	}
 	return router

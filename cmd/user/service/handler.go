@@ -2,9 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
-	"math/rand"
-	"time"
 	"wgxDouYin/dal/db"
 	"wgxDouYin/grpc/user"
 	pb "wgxDouYin/grpc/user"
@@ -17,7 +14,6 @@ type UserServerImpl struct {
 }
 
 func (s *UserServerImpl) UserRegister(ctx context.Context, req *user.UserRegisterRequest) (resp *user.UserRegisterResponse, err error) {
-	fmt.Printf("req:%v\n", req)
 	logger := zap.InitLogger()
 	usr, err := db.GetUserByName(ctx, req.Username)
 	if err != nil {
@@ -35,7 +31,6 @@ func (s *UserServerImpl) UserRegister(ctx context.Context, req *user.UserRegiste
 		}
 		return res, nil
 	}
-	rand.New(rand.NewSource(time.Now().UnixMilli()))
 	usr = &db.User{
 		UserName: req.Username,
 		Password: tool.PasswordEncrypt(req.Password),
@@ -55,4 +50,26 @@ func (s *UserServerImpl) UserRegister(ctx context.Context, req *user.UserRegiste
 		Token:      "",
 	}
 	return res, nil
+}
+
+func (s *UserServerImpl) UserLogin(ctx context.Context, req *user.UserLoginRequest) (resp *user.UserLoginResponse, err error) {
+	logger := zap.InitLogger()
+
+	usr, err := db.GetUserByName(ctx, req.Username)
+	if err != nil {
+		logger.Errorln(err.Error())
+		res := &user.UserLoginResponse{
+			StatusCode: -1,
+			StatusMsg:  "登陆失败：服务器内部错误",
+		}
+		return res, err
+	} else if usr == nil {
+		logger.Errorln("用户名或密码错误")
+		res := &user.UserLoginResponse{
+			StatusCode: -1,
+			StatusMsg:  "用户名不存在",
+		}
+		return res, nil
+	}
+	return nil, nil
 }

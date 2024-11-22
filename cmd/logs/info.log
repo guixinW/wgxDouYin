@@ -44,3 +44,12 @@
 2024-10-26T16:20:25.131+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
 2024-10-26T16:22:03.640+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
 2024-10-26T16:22:03.707+0800	INFO	etcd/register.go:85	start keepalive lease 3f3592c7ead07004 for etcd register
+2024-11-22T14:28:20.158+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
+2024-11-22T14:29:00.581+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
+2024-11-22T14:29:01.066+0800	INFO	etcd/register.go:85	start keepalive lease 3f3593528d3a2e04 for etcd register
+2024-11-22T14:36:12.394+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
+2024-11-22T14:36:12.728+0800	INFO	etcd/register.go:85	start keepalive lease 3f3593528d3a2e08 for etcd register
+2024-11-22T14:59:26.989+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
+2024-11-22T14:59:31.994+0800	INFO	etcd/register.go:85	start keepalive lease 3f3593528d3a2e10 for etcd register
+2024-11-22T14:59:52.501+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
+2024-11-22T14:59:53.390+0800	INFO	etcd/register.go:85	start keepalive lease 3f3593528d3a2e14 for etcd register

@@ -7,6 +7,7 @@ import (
 	"wgxDouYin/cmd/user/service"
 	userPb "wgxDouYin/grpc/user"
 	"wgxDouYin/pkg/etcd"
+	"wgxDouYin/pkg/keys"
 	"wgxDouYin/pkg/viper"
 	"wgxDouYin/pkg/zap"
 )
@@ -21,6 +22,16 @@ var (
 	signinKey = config.Viper.GetString("JWT.signinKey")
 	logger    = zap.InitLogger()
 )
+
+func init() {
+	newKey, err := keys.GetKey("test.pem")
+	if err != nil {
+		logger.Fatalf("%v failed get private key.", serviceName)
+		return
+	}
+	privateKey := newKey
+	service.Init(privateKey)
+}
 
 func main() {
 	r, err := etcd.NewServiceRegistry([]string{etcdAddr})

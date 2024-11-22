@@ -21,7 +21,7 @@ func InitUser(config *viper.Config) {
 
 	resolver.Register(Discoverer)
 	//defer Discoverer.Close()
-	initClient(serviceName, Discoverer.Scheme(), &userClient)
+	initClient(Discoverer.Scheme(), serviceName, &userClient)
 }
 
 func Register(ctx context.Context, req *user.UserRegisterRequest) (*user.UserRegisterResponse, error) {
