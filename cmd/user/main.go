@@ -7,6 +7,7 @@ import (
 	"wgxDouYin/cmd/user/service"
 	userPb "wgxDouYin/grpc/user"
 	"wgxDouYin/pkg/etcd"
+	"wgxDouYin/pkg/keys"
 	"wgxDouYin/pkg/viper"
 	"wgxDouYin/pkg/zap"
 )
@@ -22,6 +23,12 @@ var (
 )
 
 func init() {
+	privateKeyPath := fmt.Sprintf("keys/%v.pem", serviceName)
+	privateKey, err := keys.LoadPrivateKey(privateKeyPath)
+	if err != nil {
+		panic(err)
+	}
+	service.Init(privateKey)
 }
 
 func main() {

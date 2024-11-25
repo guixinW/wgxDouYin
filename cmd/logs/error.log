@@ -39,3 +39,14 @@
 2024-11-25T17:14:51.485+0800	FATAL	user/main.go:28	wgxDouYinUserServer failed get private key.
 2024-11-25T17:15:24.696+0800	FATAL	user/main.go:28	wgxDouYinUserServer failed get private key.
 2024-11-25T17:16:24.130+0800	FATAL	user/main.go:28	wgxDouYinUserServer failed get private key.
+2024-11-25T22:13:15.040+0800	ERROR	service/handler.go:22	Error 1146 (42S02): Table 'wgxtiktok.users' doesn't exist
+2024-11-25T22:14:41.870+0800	FATAL	db/init.go:59	invalid connection
+2024-11-25T22:18:30.729+0800	FATAL	db/init.go:59	Error 1050 (42S01): Table 'users' already exists
+2024-11-25T22:23:01.787+0800	FATAL	db/init.go:59	Error 1050 (42S01): Table 'users' already exists
+2024-11-25T22:24:33.999+0800	ERROR	service/handler.go:29	该用户名已存在:test2
+2024-11-25T22:24:42.000+0800	ERROR	service/handler.go:29	该用户名已存在:test2
+2024-11-25T22:30:33.398+0800	ERROR	service/handler.go:29	该用户名已存在:test2
+2024-11-25T22:35:33.214+0800	ERROR	service/handler.go:29	该用户名已存在:test2
+2024-11-25T22:36:08.027+0800	ERROR	service/handler.go:29	该用户名已存在:test2
+2024-11-25T22:36:39.179+0800	ERROR	service/handler.go:29	该用户名已存在:test2
+2024-11-25T22:37:42.992+0800	ERROR	service/handler.go:29	该用户名已存在:test2

@@ -25,9 +25,11 @@ func InitUser(config *viper.Config) {
 }
 
 func Register(ctx context.Context, req *user.UserRegisterRequest) (*user.UserRegisterResponse, error) {
+	fmt.Println("call Register")
 	return userClient.UserRegister(ctx, req)
 }
 
 func Login(ctx context.Context, req *user.UserLoginRequest) (*user.UserLoginResponse, error) {
+	fmt.Println("call Login")
 	return userClient.Login(ctx, req)
 }
