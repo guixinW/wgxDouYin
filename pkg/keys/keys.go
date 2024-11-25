@@ -8,7 +8,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
-	"path/filepath"
 )
 
 // CreateKeyPair 创建一个私钥，并通过这个私钥返回公钥
@@ -21,37 +20,7 @@ func CreateKeyPair() (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 	return privateKey, publicKey, nil
 }
 
-func GetKey(keyName string) (*ecdsa.PrivateKey, error) {
-	path, err := getKeyPath()
-	if err != nil {
-		return nil, err
-	}
-	keyPath := filepath.Join(path, keyName)
-	if _, err = os.Stat(keyPath); os.IsNotExist(err) {
-		privateKey, _, err := CreateKeyPair()
-		if err != nil {
-			return nil, err
-		}
-		err = savePrivateKey(keyPath, privateKey)
-		if err != nil {
-			return nil, err
-		}
-		return privateKey, nil
-	}
-	return loadPrivateKey(keyPath)
-}
-
-func getKeyPath() (string, error) {
-	currentDir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	keysDir := filepath.Join(currentDir, "keys")
-	privateKeyFilePath := filepath.Join(keysDir)
-	return privateKeyFilePath, nil
-}
-
-func savePrivateKey(path string, privateKey *ecdsa.PrivateKey) error {
+func SavePrivateKey(path string, privateKey *ecdsa.PrivateKey) error {
 	keyBytes, err := x509.MarshalECPrivateKey(privateKey)
 	if err != nil {
 		return fmt.Errorf("failed to marshal ECDSA private key: %w", err)
@@ -73,7 +42,7 @@ func savePrivateKey(path string, privateKey *ecdsa.PrivateKey) error {
 	return nil
 }
 
-func loadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
+func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read key file: %w", err)

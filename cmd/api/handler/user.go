@@ -58,3 +58,39 @@ func UserRegister(c *gin.Context) {
 		Token:  res.Token,
 	})
 }
+
+func UserLogin(c *gin.Context) {
+	username := c.Query("username")
+	password := c.Query("password")
+	if len(username) == 0 || len(password) == 0 {
+		c.JSON(http.StatusBadRequest, response.Login{
+			Base: response.Base{
+				StatusCode: -1,
+				StatusMsg:  "用户名或者密码不能为空",
+			},
+		})
+		return
+	}
+	req := &grpc.UserLoginRequest{
+		Username: username,
+		Password: password,
+	}
+	res, _ := rpc.Login(c, req)
+	if res.StatusCode == -1 {
+		c.JSON(http.StatusOK, response.Login{
+			Base: response.Base{
+				StatusCode: -1,
+				StatusMsg:  res.StatusMsg,
+			},
+		})
+		return
+	}
+	c.JSON(http.StatusOK, response.Login{
+		Base: response.Base{
+			StatusCode: 0,
+			StatusMsg:  res.StatusMsg,
+		},
+		UserID: res.UserId,
+		Token:  res.Token,
+	})
+}

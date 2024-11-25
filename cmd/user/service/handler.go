@@ -56,7 +56,6 @@ func (s *UserServerImpl) UserRegister(ctx context.Context, req *user.UserRegiste
 
 func (s *UserServerImpl) UserLogin(ctx context.Context, req *user.UserLoginRequest) (resp *user.UserLoginResponse, err error) {
 	logger := zap.InitLogger()
-
 	usr, err := db.GetUserByName(ctx, req.Username)
 	if err != nil {
 		logger.Errorln(err.Error())

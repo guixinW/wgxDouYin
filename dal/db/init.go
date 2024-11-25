@@ -55,9 +55,9 @@ func init() {
 	if err != nil {
 		panic(err.Error())
 	}
-	if err := db.AutoMigrate(&User{}, &Video{}, &Comment{}, &FollowRelation{}); err != nil {
-		zapLogger.Fatalln(err.Error())
-	}
+	//if err := db.AutoMigrate(&User{}, &Video{}, &Comment{}, &FollowRelation{}); err != nil {
+	//	zapLogger.Fatalln(err.Error())
+	//}
 	_db, err := db.DB()
 	if err != nil {
 		zapLogger.Fatalln(err.Error())

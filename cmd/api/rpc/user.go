@@ -27,3 +27,7 @@ func InitUser(config *viper.Config) {
 func Register(ctx context.Context, req *user.UserRegisterRequest) (*user.UserRegisterResponse, error) {
 	return userClient.UserRegister(ctx, req)
 }
+
+func Login(ctx context.Context, req *user.UserLoginRequest) (*user.UserLoginResponse, error) {
+	return userClient.Login(ctx, req)
+}
