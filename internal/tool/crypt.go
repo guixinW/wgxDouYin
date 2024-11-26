@@ -3,11 +3,18 @@ package tool
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"golang.org/x/crypto/argon2"
 	"log"
+	"math"
 )
 
-func RandomBytes(size int) (data []byte) {
+var (
+	SaltByteLength   uint = 16
+	SaltStringLength uint = uint(math.Ceil(float64(SaltByteLength)/3)) * 4
+)
+
+func RandomBytes(size uint) (data []byte) {
 	salt := make([]byte, size)
 	_, err := rand.Read(salt)
 	if err != nil {
@@ -16,13 +23,14 @@ func RandomBytes(size int) (data []byte) {
 	return salt
 }
 
-func Argon2Encrypt(password []byte, salt []byte) string {
-	hashedPassword := argon2.Key(password, salt, 1, 32*1024, 4, 32)
-	result := base64.StdEncoding.EncodeToString(salt) + "$" + base64.StdEncoding.EncodeToString(hashedPassword)
-	return result
-}
-
 func PasswordEncrypt(password string) string {
-	salt := RandomBytes(16)
-	return Argon2Encrypt([]byte(password), salt)
+	salt := RandomBytes(SaltByteLength)
+	passwordByte := []byte(password)
+	hashedPassword := argon2.Key(passwordByte, salt, 1, 32*1024, 4, 32)
+	fmt.Println(hashedPassword)
+	fmt.Println(salt)
+	result := base64.StdEncoding.EncodeToString(salt) + base64.StdEncoding.EncodeToString(hashedPassword)
+	fmt.Println(len(base64.StdEncoding.EncodeToString(salt)))
+	fmt.Println(SaltStringLength)
+	return result
 }
