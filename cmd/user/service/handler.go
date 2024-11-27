@@ -65,10 +65,17 @@ func (s *UserServerImpl) Login(ctx context.Context, req *user.UserLoginRequest) 
 		}
 		return res, err
 	} else if usr == nil {
-		logger.Errorln("用户名或密码错误")
 		res := &user.UserLoginResponse{
 			StatusCode: -1,
 			StatusMsg:  "用户名不存在",
+		}
+		return res, nil
+	}
+	if tool.PasswordCompare(req.Password, usr.Password) == false {
+		logger.Errorf("%v尝试登录，但是密码%v错误", req.Username, req.Password)
+		res := &user.UserLoginResponse{
+			StatusCode: -1,
+			StatusMsg:  "用户名或密码错误",
 		}
 		return res, nil
 	}

@@ -51,3 +51,22 @@ func CreateUser(ctx context.Context, user *User) error {
 	})
 	return err
 }
+
+// GetPasswordByUsername
+//
+//	@Description: 根据用户名获取密码
+//	@Date 2023-01-21 17:15:17
+//	@param ctx 数据库操作上下文
+//	@param userName 用户名
+//	@return *User 用户
+//	@return error
+func GetPasswordByUsername(ctx context.Context, userName string) (*User, error) {
+	user := new(User)
+	if err := GetDB().Clauses(dbresolver.Read).WithContext(ctx).
+		Select("password").Where("user_name = ?", userName).
+		First(&user).Error; err == nil {
+		return user, nil
+	} else {
+		return nil, err
+	}
+}
