@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	JWT *jwt.JWT
+	JWT *jwt.KeyManager
 )
 
 func Init(privateKey *ecdsa.PrivateKey) {

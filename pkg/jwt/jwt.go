@@ -14,7 +14,7 @@ var (
 	ErrTokenInvalid     = errors.New("couldn't handle this token")
 )
 
-type JWT struct {
+type KeyManager struct {
 	serverToPublicKey map[string]*ecdsa.PublicKey
 	serverPrivateKey  *ecdsa.PrivateKey
 }
@@ -25,14 +25,14 @@ type CustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-// NewJWT generates a JWT for the given serverName.
+// NewJWT generates a KeyManager for the given serverName.
 // It saves the private key and the corresponding public key associated with the serverName.
-func NewJWT(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey, serverName string) *JWT {
-	return &JWT{serverPrivateKey: privateKey, serverToPublicKey: map[string]*ecdsa.PublicKey{serverName: publicKey}}
+func NewJWT(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey, serverName string) *KeyManager {
+	return &KeyManager{serverPrivateKey: privateKey, serverToPublicKey: map[string]*ecdsa.PublicKey{serverName: publicKey}}
 }
 
 // getServerPublicKey retrieves the public key associated with specified service.
-func (j *JWT) getServerPublicKey(server string) (*ecdsa.PublicKey, error) {
+func (j *KeyManager) getServerPublicKey(server string) (*ecdsa.PublicKey, error) {
 	serverPublicKey, ok := j.serverToPublicKey[server]
 	if !ok {
 		return nil, errors.New("can't find server's public key")
@@ -41,22 +41,22 @@ func (j *JWT) getServerPublicKey(server string) (*ecdsa.PublicKey, error) {
 }
 
 // addServerPublicKey saves the public key associated with specified service.
-func (j *JWT) addServerPublicKey(serverName string, serverPublicKey *ecdsa.PublicKey) error {
+func (j *KeyManager) addServerPublicKey(serverName string, serverPublicKey *ecdsa.PublicKey) error {
 	if j == nil {
-		return errors.New("JWT is nil object")
+		return errors.New("KeyManager is nil object")
 	}
 	j.serverToPublicKey[serverName] = serverPublicKey
 	return nil
 }
 
 // CreateToken creates a jwt by userid
-func (j *JWT) CreateToken(claims CustomClaims) (string, error) {
+func (j *KeyManager) CreateToken(claims CustomClaims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
 	return token.SignedString(j.serverPrivateKey)
 }
 
 // ParseToken parses a token by the public key of the corresponding service.
-func (j *JWT) ParseToken(tokenString, serverName string) (*CustomClaims, error) {
+func (j *KeyManager) ParseToken(tokenString, serverName string) (*CustomClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
 			return nil, ErrTokenInvalid
