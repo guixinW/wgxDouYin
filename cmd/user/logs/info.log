@@ -1,8 +1,0 @@
-2024-11-25T22:46:17.374+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
-2024-11-25T22:46:37.682+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
-2024-11-25T22:46:50.058+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
-2024-11-25T22:46:50.072+0800	INFO	etcd/register.go:85	start keepalive lease 3f359363995fb53b for etcd register
-2024-11-26T16:58:44.870+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
-2024-11-26T16:58:45.065+0800	INFO	etcd/register.go:85	start keepalive lease 3f3593528d3a2e35 for etcd register
-2024-11-28T15:58:19.554+0800	INFO	db/init.go:37	MySQL server conncetion sucessful!
-2024-11-28T15:58:20.777+0800	INFO	etcd/register.go:85	start keepalive lease 3f3593528d3a2e48 for etcd register

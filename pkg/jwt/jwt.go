@@ -28,25 +28,19 @@ type CustomClaims struct {
 // NewJWT generates a KeyManager for the given serverName.
 // It saves the private key and the corresponding public key associated with the serverName.
 func NewJWT(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey, serverName string) *KeyManager {
+	if privateKey == nil {
+		return &KeyManager{serverPrivateKey: nil, serverToPublicKey: make(map[string]*ecdsa.PublicKey)}
+	}
 	return &KeyManager{serverPrivateKey: privateKey, serverToPublicKey: map[string]*ecdsa.PublicKey{serverName: publicKey}}
 }
 
-// getServerPublicKey retrieves the public key associated with specified service.
-func (j *KeyManager) getServerPublicKey(server string) (*ecdsa.PublicKey, error) {
+// GetServerPublicKey retrieves the public key associated with specified service.
+func (j *KeyManager) GetServerPublicKey(server string) (*ecdsa.PublicKey, error) {
 	serverPublicKey, ok := j.serverToPublicKey[server]
 	if !ok {
 		return nil, errors.New("can't find server's public key")
 	}
 	return serverPublicKey, nil
-}
-
-// addServerPublicKey saves the public key associated with specified service.
-func (j *KeyManager) addServerPublicKey(serverName string, serverPublicKey *ecdsa.PublicKey) error {
-	if j == nil {
-		return errors.New("KeyManager is nil object")
-	}
-	j.serverToPublicKey[serverName] = serverPublicKey
-	return nil
 }
 
 // CreateToken creates a jwt by userid
@@ -61,7 +55,7 @@ func (j *KeyManager) ParseToken(tokenString, serverName string) (*CustomClaims, 
 		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
 			return nil, ErrTokenInvalid
 		}
-		if serverPublicKey, err := j.getServerPublicKey(serverName); err != nil {
+		if serverPublicKey, err := j.GetServerPublicKey(serverName); err != nil {
 			return nil, err
 		} else {
 			return serverPublicKey, nil
@@ -86,6 +80,16 @@ func (j *KeyManager) ParseToken(tokenString, serverName string) (*CustomClaims, 
 	return nil, ErrTokenInvalid
 }
 
+// TransferTimeToJwtTime 将time.Time转换为jwt NumericDate
 func TransferTimeToJwtTime(old time.Time) *jwt.NumericDate {
 	return jwt.NewNumericDate(old)
+}
+
+// addServerPublicKey saves the public key associated with specified service.
+func (j *KeyManager) addServerPublicKey(serverName string, serverPublicKey *ecdsa.PublicKey) error {
+	if j == nil {
+		return errors.New("KeyManager is nil object")
+	}
+	j.serverToPublicKey[serverName] = serverPublicKey
+	return nil
 }

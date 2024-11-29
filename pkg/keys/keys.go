@@ -58,3 +58,15 @@ func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
 
 	return privateKey, nil
 }
+
+func PublicKeyToPEM(pub *ecdsa.PublicKey) (string, error) {
+	pubBytes := append(pub.X.Bytes(), pub.Y.Bytes()...)
+
+	pemBlock := &pem.Block{
+		Type:  "ECDSA PUBLIC KEY",
+		Bytes: pubBytes,
+	}
+
+	pemBytes := pem.EncodeToMemory(pemBlock)
+	return string(pemBytes), nil
+}

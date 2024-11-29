@@ -5,6 +5,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"wgxDouYin/grpc/user"
+	"wgxDouYin/pkg/etcd"
 	"wgxDouYin/pkg/viper"
 )
 
@@ -30,7 +31,7 @@ func connectServer(scheme, serviceName string) (conn *grpc.ClientConn, err error
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	addr := fmt.Sprintf("%s:///%s", scheme, serviceName)
+	addr := fmt.Sprintf("%s:///%s", scheme, etcd.AddrPrefix(serviceName))
 	fmt.Printf("connect addr %v\n", addr)
 	conn, err = grpc.NewClient(addr, opts...)
 	return

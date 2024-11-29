@@ -17,6 +17,8 @@ var (
 	serviceName = config.Viper.GetString("server.name")
 	serviceAddr = fmt.Sprintf("%s:%d", config.Viper.GetString("server.host"),
 		config.Viper.GetInt("server.port"))
+	rpcAddr = fmt.Sprintf("%s:%d", config.Viper.GetString("rpc.host"),
+		config.Viper.GetInt("rpc.port"))
 	etcdAddr = fmt.Sprintf("%s:%d", config.Viper.GetString("etcd.host"),
 		config.Viper.GetInt("etcd.port"))
 	logger = zap.InitLogger()
@@ -28,7 +30,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	service.Init(privateKey)
+	service.Init(privateKey, serviceName)
 }
 
 func main() {
@@ -40,7 +42,12 @@ func main() {
 		logger.Fatalln("cant register service")
 		return
 	}
-	err = r.Register(serviceName, "127.0.0.1:8085")
+
+	servicePublicKey, err := service.KeyManager.GetServerPublicKey(serviceName)
+	if err != nil || servicePublicKey == nil {
+		logger.Fatalln("cant get service public key")
+	}
+	err = r.Register(serviceName, rpcAddr, servicePublicKey)
 	if err != nil {
 		logger.Fatalln(err.Error())
 	}

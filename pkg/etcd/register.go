@@ -2,10 +2,12 @@ package etcd
 
 import (
 	"context"
+	"crypto/ecdsa"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"os"
 	"strconv"
 	"time"
+	"wgxDouYin/pkg/keys"
 	"wgxDouYin/pkg/zap"
 )
 
@@ -46,14 +48,32 @@ func NewServiceRegistryWithAuth(endpoints []string, username, password string) (
 	}, nil
 }
 
-func (e *ServiceRegistry) Register(serviceName, serviceAddr string) error {
+func (e *ServiceRegistry) Register(serviceName, serviceAddr string, servicePublicKey *ecdsa.PublicKey) error {
 	leaseID, err := e.createLease()
 	if err != nil {
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(ctxTimeout))
 	defer cancel()
-	_, err = e.etcdClient.Put(ctx, serviceName, serviceAddr, clientv3.WithLease(leaseID))
+
+	//将service的地址存入etcd
+	_, err = e.etcdClient.Put(ctx, AddrPrefix(serviceName),
+		serviceAddr, clientv3.WithLease(leaseID))
+	if err != nil {
+		return err
+	}
+
+	//将service的公钥存入etcd
+	servicePublicKeyString, err := keys.PublicKeyToPEM(servicePublicKey)
+	if err != nil {
+		return err
+	}
+	_, err = e.etcdClient.Put(ctx, KeyPrefix(serviceName),
+		servicePublicKeyString, clientv3.WithLease(leaseID))
+	if err != nil {
+		return err
+	}
+
 	meta := registerMeta{
 		leaseID: leaseID,
 	}

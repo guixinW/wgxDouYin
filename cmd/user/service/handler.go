@@ -83,7 +83,7 @@ func (s *UserServerImpl) Login(ctx context.Context, req *user.UserLoginRequest) 
 		UserId: uint64(usr.ID),
 	}
 	claims.ExpiresAt = jwt.TransferTimeToJwtTime(time.Now().Add(time.Hour * 1))
-	token, err := JWT.CreateToken(claims)
+	token, err := KeyManager.CreateToken(claims)
 	if err != nil {
 		logger.Errorf("发生错误:%v", err.Error())
 		res := &user.UserLoginResponse{

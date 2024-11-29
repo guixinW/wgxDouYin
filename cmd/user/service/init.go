@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	JWT *jwt.KeyManager
+	KeyManager *jwt.KeyManager
 )
 
-func Init(privateKey *ecdsa.PrivateKey) {
-	JWT = jwt.NewJWT(privateKey, &privateKey.PublicKey, "user")
+func Init(privateKey *ecdsa.PrivateKey, serviceName string) {
+	KeyManager = jwt.NewJWT(privateKey, &privateKey.PublicKey, serviceName)
 }
