@@ -2,18 +2,17 @@ package etcd
 
 import "fmt"
 
-const (
-	etcdPrefix = "grpc/registry-etcd"
-)
-
 func AddrPrefix(serviceName string) string {
 	return fmt.Sprintf("/services/%s/address", serviceName)
 }
 
 func KeyPrefix(serviceName string) string {
-	return fmt.Sprintf("/services/%s/publickKey", serviceName)
+	return fmt.Sprintf("/services/%s/publicKey", serviceName)
 }
 
+//const (
+//	etcdPrefix = "grpc/registry-etcd"
+//)
 //
 //func serviceKeyPrefix(serviceName string) string {
 //	return etcdPrefix + "/" + serviceName

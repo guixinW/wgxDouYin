@@ -14,6 +14,8 @@ func init() {
 	InitUser(&userConfig)
 }
 
+// initClient this function connect to rpc server by service name. service name will be
+// resolved by resolver that is init by InitUser.
 func initClient(scheme, serviceName string, client interface{}) {
 	conn, err := connectServer(scheme, serviceName)
 	if err != nil {
@@ -27,6 +29,7 @@ func initClient(scheme, serviceName string, client interface{}) {
 	}
 }
 
+// connectServer is used by initClient.
 func connectServer(scheme, serviceName string) (conn *grpc.ClientConn, err error) {
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -35,4 +38,8 @@ func connectServer(scheme, serviceName string) (conn *grpc.ClientConn, err error
 	fmt.Printf("connect addr %v\n", addr)
 	conn, err = grpc.NewClient(addr, opts...)
 	return
+}
+
+func initPublicKey(scheme, serviceName string) {
+
 }

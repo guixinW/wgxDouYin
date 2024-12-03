@@ -14,6 +14,35 @@ var (
 	schema  = "etcd"
 )
 
+type TikTokServiceResolverBuilder struct {
+}
+
+func (*TikTokServiceResolverBuilder) Build(target resolver.Target, cc resolver.ClientConn, _ resolver.BuildOptions) (resolver.Resolver, error) {
+	r := &TikTokServiceResolver{
+		target: target,
+		cc:     cc,
+	}
+	r.start()
+	return r, nil
+}
+
+type TikTokServiceResolver struct {
+	target resolver.Target
+	cc     resolver.ClientConn
+	cli    *clientv3.Client
+}
+
+func (r *TikTokServiceResolver) ResolveNow(options resolver.ResolveNowOptions) {
+}
+
+func (r *TikTokServiceResolver) Close() {
+
+}
+
+func (r *TikTokServiceResolver) start() {
+
+}
+
 type ServiceDiscoverer struct {
 	schema   string
 	EtcdAdds []string
@@ -38,7 +67,7 @@ func (s *ServiceDiscoverer) Scheme() string {
 	return s.schema
 }
 
-func (s *ServiceDiscoverer) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
+func (s *ServiceDiscoverer) Build(target resolver.Target, cc resolver.ClientConn, _ resolver.BuildOptions) (resolver.Resolver, error) {
 	s.cc = cc
 	s.keyPrefix = target.Endpoint()
 	if _, err := s.start(); err != nil {
