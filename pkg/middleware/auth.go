@@ -5,18 +5,20 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
+	"wgxDouYin/pkg/etcd"
 	"wgxDouYin/pkg/jwt"
+	"wgxDouYin/pkg/keys"
 )
 
 func getServerName(path string) string {
 	if strings.HasPrefix(path, "/wgxDouYin/user/") {
-		return "user"
+		return etcd.KeyPrefix("wgxDouYinUserServer")
 	}
 	return ""
 }
 
 // TokenAuthMiddleware JWT验证中间件.skipRoutes为无需验证的请求
-func TokenAuthMiddleware(keys *jwt.KeyManager, skipRoutes ...string) gin.HandlerFunc {
+func TokenAuthMiddleware(keys *keys.KeyManager, skipRoutes ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		for _, skipRoute := range skipRoutes {
 			if 0 == strings.Compare(c.FullPath(), skipRoute) {
@@ -24,7 +26,11 @@ func TokenAuthMiddleware(keys *jwt.KeyManager, skipRoutes ...string) gin.Handler
 				return
 			}
 		}
+		fmt.Printf("user service key manage:%v\n", keys)
+		pub, _ := keys.GetServerPublicKey(getServerName(c.Request.URL.Path))
+		fmt.Printf("user service public key %v\n", pub)
 		authHeader := c.GetHeader("Authorization")
+		fmt.Println(authHeader)
 		if authHeader == "" {
 			responseWithError(c, http.StatusUnauthorized, "Authorization header is missing")
 			return
@@ -35,12 +41,18 @@ func TokenAuthMiddleware(keys *jwt.KeyManager, skipRoutes ...string) gin.Handler
 			return
 		}
 		tokenString := authParts[1]
-		fmt.Printf("server path:%v\n", c.Request.URL.Path)
-		serverName := getServerName(c.Request.URL.Path)
-		fmt.Printf("server name:%v\n", serverName)
-		claim, err := keys.ParseToken(tokenString, serverName)
+		publicKey, err := keys.GetServerPublicKey(getServerName(c.Request.URL.Path))
 		if err != nil {
-			responseWithError(c, http.StatusUnauthorized, err)
+			responseWithError(c, http.StatusUnauthorized, err.Error())
+			return
+		}
+		if publicKey == nil {
+			responseWithError(c, http.StatusUnauthorized, "public key is nil")
+			return
+		}
+		claim, err := jwt.ParseToken(publicKey, tokenString)
+		if err != nil {
+			responseWithError(c, http.StatusUnauthorized, err.Error())
 			return
 		}
 		c.Set("UserID", claim.UserId)

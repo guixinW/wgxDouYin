@@ -3,6 +3,7 @@ package etcd
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"os"
 	"strconv"
@@ -62,9 +63,12 @@ func (e *ServiceRegistry) Register(serviceName, serviceAddr string, servicePubli
 	if err != nil {
 		return err
 	}
+	fmt.Printf("service name:%v\n", serviceName)
 
 	//将service的公钥存入etcd
+	fmt.Printf("register public key:%v\n", servicePublicKey)
 	servicePublicKeyString, err := keys.PublicKeyToPEM(servicePublicKey)
+	fmt.Printf("register public key:%v\n", servicePublicKeyString)
 	if err != nil {
 		return err
 	}

@@ -28,9 +28,12 @@ func init() {
 	privateKeyPath := fmt.Sprintf("keys/%v.pem", serviceName)
 	privateKey, err := keys.LoadPrivateKey(privateKeyPath)
 	if err != nil {
-		panic(err)
+		logger.Errorln(err.Error())
 	}
-	service.Init(privateKey, serviceName)
+	err = service.Init(privateKey, serviceName)
+	if err != nil {
+		logger.Errorln(err.Error())
+	}
 }
 
 func main() {

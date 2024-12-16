@@ -1,10 +1,11 @@
+// Package jwt jwt提供两个函数，用于对消息签名
 package jwt
 
 import (
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"github.com/golang-jwt/jwt/v5"
-	"time"
 )
 
 var (
@@ -14,11 +15,6 @@ var (
 	ErrTokenInvalid     = errors.New("couldn't handle this token")
 )
 
-type KeyManager struct {
-	serverToPublicKey map[string]*ecdsa.PublicKey
-	serverPrivateKey  *ecdsa.PrivateKey
-}
-
 // CustomClaims The member variables in CustomClaims need to be capitalized because jwt will deserialize them later.
 type CustomClaims struct {
 	UserId uint64
@@ -27,44 +23,28 @@ type CustomClaims struct {
 
 // NewJWT generates a KeyManager for the given serverName.
 // It saves the private key and the corresponding public key associated with the serverName.
-func NewJWT(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey, serverName string) *KeyManager {
-	if privateKey == nil {
-		return &KeyManager{serverPrivateKey: nil, serverToPublicKey: make(map[string]*ecdsa.PublicKey)}
-	}
-	return &KeyManager{serverPrivateKey: privateKey, serverToPublicKey: map[string]*ecdsa.PublicKey{serverName: publicKey}}
-}
-
-// GetServerPublicKey retrieves the public key associated with specified service.
-func (j *KeyManager) GetServerPublicKey(server string) (*ecdsa.PublicKey, error) {
-	serverPublicKey, ok := j.serverToPublicKey[server]
-	if !ok {
-		return nil, errors.New("can't find server's public key")
-	}
-	return serverPublicKey, nil
-}
 
 // CreateToken creates a jwt by userid
-func (j *KeyManager) CreateToken(claims CustomClaims) (string, error) {
+func CreateToken(privateKey *ecdsa.PrivateKey, claims CustomClaims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
-	return token.SignedString(j.serverPrivateKey)
+	return token.SignedString(privateKey)
 }
 
 // ParseToken parses a token by the public key of the corresponding service.
-func (j *KeyManager) ParseToken(tokenString, serverName string) (*CustomClaims, error) {
+func ParseToken(publicKey *ecdsa.PublicKey, tokenString string) (*CustomClaims, error) {
+	if publicKey == nil {
+		return nil, ErrTokenInvalid
+	}
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
 			return nil, ErrTokenInvalid
 		}
-		if serverPublicKey, err := j.GetServerPublicKey(serverName); err != nil {
-			return nil, err
-		} else {
-			return serverPublicKey, nil
-		}
+		return publicKey, nil
 	})
-	//fmt.Println(token)
+	fmt.Printf("parse claim:%v\n", token.Claims.(*CustomClaims))
 	switch {
 	case token == nil:
-		return nil, ErrTokenInvalid
+		return nil, jwt.ErrInvalidKey
 	case errors.Is(err, jwt.ErrTokenMalformed):
 		return nil, ErrTokenMalformed
 	case errors.Is(err, jwt.ErrTokenSignatureInvalid):
@@ -78,18 +58,4 @@ func (j *KeyManager) ParseToken(tokenString, serverName string) (*CustomClaims, 
 		return claims, nil
 	}
 	return nil, ErrTokenInvalid
-}
-
-// TransferTimeToJwtTime 将time.Time转换为jwt NumericDate
-func TransferTimeToJwtTime(old time.Time) *jwt.NumericDate {
-	return jwt.NewNumericDate(old)
-}
-
-// addServerPublicKey saves the public key associated with specified service.
-func (j *KeyManager) addServerPublicKey(serverName string, serverPublicKey *ecdsa.PublicKey) error {
-	if j == nil {
-		return errors.New("KeyManager is nil object")
-	}
-	j.serverToPublicKey[serverName] = serverPublicKey
-	return nil
 }

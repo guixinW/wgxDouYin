@@ -5,9 +5,17 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
+	"log"
 	"os"
+	"wgxDouYin/pkg/zap"
+)
+
+var (
+	logger = zap.InitLogger()
 )
 
 // CreateKeyPair 创建一个私钥，并通过这个私钥返回公钥
@@ -33,7 +41,12 @@ func SavePrivateKey(path string, privateKey *ecdsa.PrivateKey) error {
 	if err != nil {
 		return fmt.Errorf("failed to create key file: %w", err)
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.Fatalf("failed to close key file: %v", err)
+		}
+	}(file)
 	err = pem.Encode(file, block)
 	if err != nil {
 		return fmt.Errorf("failed to write ECDSA key to file: %w", err)
@@ -48,6 +61,7 @@ func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
 		return nil, fmt.Errorf("failed to read key file: %w", err)
 	}
 	block, _ := pem.Decode(data)
+	fmt.Println(block.Type)
 	if block == nil || block.Type != "EC PRIVATE KEY" {
 		return nil, fmt.Errorf("invalid ECDSA key file format")
 	}
@@ -59,14 +73,35 @@ func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
 	return privateKey, nil
 }
 
-func PublicKeyToPEM(pub *ecdsa.PublicKey) (string, error) {
-	pubBytes := append(pub.X.Bytes(), pub.Y.Bytes()...)
-
-	pemBlock := &pem.Block{
-		Type:  "ECDSA PUBLIC KEY",
-		Bytes: pubBytes,
+func PublicKeyToPEM(publicKey *ecdsa.PublicKey) (string, error) {
+	derBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		return "", err
 	}
-
+	pemBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: derBytes,
+	}
 	pemBytes := pem.EncodeToMemory(pemBlock)
-	return string(pemBytes), nil
+	return base64.StdEncoding.EncodeToString(pemBytes), nil
+}
+
+func PEMToPublicKey(publicKeyStr string) (*ecdsa.PublicKey, error) {
+	derBytes, err := base64.StdEncoding.DecodeString(publicKeyStr)
+	if err != nil {
+		return nil, err
+	}
+	block, _ := pem.Decode(derBytes)
+	if block == nil {
+		return nil, errors.New("failed to decode PEM block")
+	}
+	pubKeyInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	pubKey, ok := pubKeyInterface.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("not an ECDSA public key")
+	}
+	return pubKey, nil
 }

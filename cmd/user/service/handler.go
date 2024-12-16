@@ -2,12 +2,13 @@ package service
 
 import (
 	"context"
+	"github.com/golang-jwt/jwt/v5"
 	"time"
 	"wgxDouYin/dal/db"
 	"wgxDouYin/grpc/user"
 	pb "wgxDouYin/grpc/user"
 	"wgxDouYin/internal/tool"
-	"wgxDouYin/pkg/jwt"
+	myJwt "wgxDouYin/pkg/jwt"
 	"wgxDouYin/pkg/zap"
 )
 
@@ -79,11 +80,15 @@ func (s *UserServerImpl) Login(ctx context.Context, req *user.UserLoginRequest) 
 		}
 		return res, nil
 	}
-	claims := jwt.CustomClaims{
+	claims := myJwt.CustomClaims{
 		UserId: uint64(usr.ID),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(2 * time.Hour)),
+			Issuer:    "Login",
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
 	}
-	claims.ExpiresAt = jwt.TransferTimeToJwtTime(time.Now().Add(time.Hour * 1))
-	token, err := KeyManager.CreateToken(claims)
+	token, err := myJwt.CreateToken(KeyManager.GetPrivateKey(), claims)
 	if err != nil {
 		logger.Errorf("发生错误:%v", err.Error())
 		res := &user.UserLoginResponse{
