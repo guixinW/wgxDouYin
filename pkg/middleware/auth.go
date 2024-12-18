@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
@@ -26,11 +25,7 @@ func TokenAuthMiddleware(keys *keys.KeyManager, skipRoutes ...string) gin.Handle
 				return
 			}
 		}
-		fmt.Printf("user service key manage:%v\n", keys)
-		pub, _ := keys.GetServerPublicKey(getServerName(c.Request.URL.Path))
-		fmt.Printf("user service public key %v\n", pub)
 		authHeader := c.GetHeader("Authorization")
-		fmt.Println(authHeader)
 		if authHeader == "" {
 			responseWithError(c, http.StatusUnauthorized, "Authorization header is missing")
 			return

@@ -21,8 +21,7 @@ type QueryUpdater interface {
 type QueryTool struct {
 	cli                 *clientv3.Client
 	closeChan           chan struct{}
-	keyValueMap         map[string]string
-	kerPrefixUpdaterMap map[string]QueryUpdater
+	keyPrefixUpdaterMap map[string]QueryUpdater
 }
 
 func NewQueryTool(etcdAddress []string) (*QueryTool, error) {
@@ -33,8 +32,7 @@ func NewQueryTool(etcdAddress []string) (*QueryTool, error) {
 	return &QueryTool{
 		cli:                 etcdCli,
 		closeChan:           make(chan struct{}),
-		kerPrefixUpdaterMap: make(map[string]QueryUpdater),
-		keyValueMap:         make(map[string]string),
+		keyPrefixUpdaterMap: make(map[string]QueryUpdater),
 	}, nil
 }
 
@@ -43,11 +41,11 @@ func (tool *QueryTool) SetQuerySourceAddress(address []string) {
 }
 
 func (tool *QueryTool) RegisterUpdater(keyPrefix string, updater QueryUpdater) {
-	tool.kerPrefixUpdaterMap[keyPrefix] = updater
+	tool.keyPrefixUpdaterMap[keyPrefix] = updater
 }
 
 func (tool *QueryTool) notifyUpdater(serverName string, key, value []byte) {
-	tool.kerPrefixUpdaterMap[serverName].Update(key, value)
+	tool.keyPrefixUpdaterMap[serverName].Update(key, value)
 }
 
 func (tool *QueryTool) Watch(keyPrefix string) {

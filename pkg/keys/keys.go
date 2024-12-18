@@ -9,7 +9,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"wgxDouYin/pkg/zap"
 )
@@ -28,32 +27,32 @@ func CreateKeyPair() (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 	return privateKey, publicKey, nil
 }
 
-func SavePrivateKey(path string, privateKey *ecdsa.PrivateKey) error {
-	keyBytes, err := x509.MarshalECPrivateKey(privateKey)
-	if err != nil {
-		return fmt.Errorf("failed to marshal ECDSA private key: %w", err)
-	}
-	block := &pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: keyBytes,
-	}
-	file, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("failed to create key file: %w", err)
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Fatalf("failed to close key file: %v", err)
-		}
-	}(file)
-	err = pem.Encode(file, block)
-	if err != nil {
-		return fmt.Errorf("failed to write ECDSA key to file: %w", err)
-	}
-
-	return nil
-}
+//func SavePrivateKey(path string, privateKey *ecdsa.PrivateKey) error {
+//	keyBytes, err := x509.MarshalECPrivateKey(privateKey)
+//	if err != nil {
+//		return fmt.Errorf("failed to marshal ECDSA private key: %w", err)
+//	}
+//	block := &pem.Block{
+//		Type:  "EC PRIVATE KEY",
+//		Bytes: keyBytes,
+//	}
+//	file, err := os.Create(path)
+//	if err != nil {
+//		return fmt.Errorf("failed to create key file: %w", err)
+//	}
+//	defer func(file *os.File) {
+//		err := file.Close()
+//		if err != nil {
+//			log.Fatalf("failed to close key file: %v", err)
+//		}
+//	}(file)
+//	err = pem.Encode(file, block)
+//	if err != nil {
+//		return fmt.Errorf("failed to write ECDSA key to file: %w", err)
+//	}
+//
+//	return nil
+//}
 
 func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
 	data, err := os.ReadFile(path)
@@ -61,8 +60,10 @@ func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
 		return nil, fmt.Errorf("failed to read key file: %w", err)
 	}
 	block, _ := pem.Decode(data)
-	fmt.Println(block.Type)
-	if block == nil || block.Type != "EC PRIVATE KEY" {
+	if block == nil {
+		return nil, fmt.Errorf("faild decode private key")
+	}
+	if block.Type != "EC PRIVATE KEY" {
 		return nil, fmt.Errorf("invalid ECDSA key file format")
 	}
 	privateKey, err := x509.ParseECPrivateKey(block.Bytes)
@@ -74,6 +75,7 @@ func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
 }
 
 func PublicKeyToPEM(publicKey *ecdsa.PublicKey) (string, error) {
+	fmt.Printf("public key curve:%v\n", publicKey.Curve)
 	derBytes, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
 		return "", err
@@ -97,6 +99,7 @@ func PEMToPublicKey(publicKeyStr string) (*ecdsa.PublicKey, error) {
 	}
 	pubKeyInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
+		fmt.Printf("failed to decode PEM block")
 		return nil, err
 	}
 	pubKey, ok := pubKeyInterface.(*ecdsa.PublicKey)

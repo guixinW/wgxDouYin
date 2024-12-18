@@ -83,7 +83,7 @@ func (s *UserServerImpl) Login(ctx context.Context, req *user.UserLoginRequest) 
 	claims := myJwt.CustomClaims{
 		UserId: uint64(usr.ID),
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(2 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
 			Issuer:    "Login",
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},

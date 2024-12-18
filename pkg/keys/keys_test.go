@@ -37,7 +37,7 @@ func TestCreateKeyParse(t *testing.T) {
 	originClaims := myJwt.CustomClaims{
 		UserId: 1234,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(2 * time.Hour)),
 			Issuer:    "test",
 			IssuedAt:  jwt.NewNumericDate(time.Now())},
 	}
@@ -63,7 +63,7 @@ func TestCreateKeyParse(t *testing.T) {
 	if duplicationPublicKey == nil {
 		t.Fatalf("PEM to public key failed, duplication public key is nil")
 	}
-	pbkParseStr2, err := myJwt.ParseToken(duplicationPublicKey, tokenString)
+	pbkParseStr2, err := myJwt.ParseToken(duplicationPublicKey, publicStr)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

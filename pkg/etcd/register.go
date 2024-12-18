@@ -58,24 +58,26 @@ func (e *ServiceRegistry) Register(serviceName, serviceAddr string, servicePubli
 	defer cancel()
 
 	//将service的地址存入etcd
-	_, err = e.etcdClient.Put(ctx, AddrPrefix(serviceName),
-		serviceAddr, clientv3.WithLease(leaseID))
-	if err != nil {
-		return err
+	if serviceName != "" && serviceAddr != "" {
+		_, err = e.etcdClient.Put(ctx, AddrPrefix(serviceName),
+			serviceAddr, clientv3.WithLease(leaseID))
+		if err != nil {
+			return err
+		}
 	}
-	fmt.Printf("service name:%v\n", serviceName)
 
 	//将service的公钥存入etcd
-	fmt.Printf("register public key:%v\n", servicePublicKey)
-	servicePublicKeyString, err := keys.PublicKeyToPEM(servicePublicKey)
-	fmt.Printf("register public key:%v\n", servicePublicKeyString)
-	if err != nil {
-		return err
-	}
-	_, err = e.etcdClient.Put(ctx, KeyPrefix(serviceName),
-		servicePublicKeyString, clientv3.WithLease(leaseID))
-	if err != nil {
-		return err
+	if servicePublicKey.Curve != nil {
+		servicePublicKeyString, err := keys.PublicKeyToPEM(servicePublicKey)
+		fmt.Printf("register public key:%v\n", servicePublicKeyString)
+		if err != nil {
+			return err
+		}
+		_, err = e.etcdClient.Put(ctx, KeyPrefix(serviceName),
+			servicePublicKeyString, clientv3.WithLease(leaseID))
+		if err != nil {
+			return err
+		}
 	}
 
 	meta := registerMeta{
