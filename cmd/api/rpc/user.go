@@ -27,3 +27,8 @@ func Login(ctx context.Context, req *user.UserLoginRequest) (*user.UserLoginResp
 	fmt.Println("call Login")
 	return userClient.Login(ctx, req)
 }
+
+func UserInform(ctx context.Context, req *user.UserInfoRequest) (*user.UserInfoResponse, error) {
+	fmt.Println("call UserInform")
+	return userClient.UserInfo(ctx, req)
+}

@@ -94,3 +94,40 @@ func UserLogin(c *gin.Context) {
 		Token:  res.Token,
 	})
 }
+
+func UserInform(c *gin.Context) {
+	userId, exist := c.Get("UserID")
+	if !exist {
+		c.JSON(http.StatusBadRequest, response.UserInform{
+			Base: response.Base{
+				StatusCode: -1,
+				StatusMsg:  "用户名或者密码不能为空",
+			},
+			User: nil,
+		})
+		return
+	}
+	id := userId.(uint64)
+	req := &grpc.UserInfoRequest{
+		UserId: id,
+		Token:  "",
+	}
+	res, _ := rpc.UserInform(c, req)
+	if res.StatusCode == -1 {
+		c.JSON(http.StatusOK, response.UserInform{
+			Base: response.Base{
+				StatusCode: -1,
+				StatusMsg:  res.StatusMsg,
+			},
+			User: nil,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, response.UserInform{
+		Base: response.Base{
+			StatusCode: 0,
+			StatusMsg:  res.StatusMsg,
+		},
+		User: res.User,
+	})
+}

@@ -49,7 +49,7 @@ func (s *UserServerImpl) UserRegister(ctx context.Context, req *user.UserRegiste
 	res := &user.UserRegisterResponse{
 		StatusCode: 0,
 		StatusMsg:  "注册成功",
-		UserId:     int64(usr.ID),
+		UserId:     uint64(usr.ID),
 		Token:      "",
 	}
 	return res, nil
@@ -100,8 +100,39 @@ func (s *UserServerImpl) Login(ctx context.Context, req *user.UserLoginRequest) 
 	res := &user.UserLoginResponse{
 		StatusCode: 0,
 		StatusMsg:  "success",
-		UserId:     int64(usr.ID),
+		UserId:     uint64(usr.ID),
 		Token:      token,
 	}
 	return res, nil
+}
+
+func (s *UserServerImpl) UserInfo(ctx context.Context, req *user.UserInfoRequest) (resp *user.UserInfoResponse, err error) {
+	logger := zap.InitLogger()
+	usr, err := db.GetUserByID(ctx, req.UserId)
+	if err != nil {
+		logger.Errorln(err.Error())
+		res := &user.UserInfoResponse{
+			StatusCode: -1,
+			StatusMsg:  "获取用户信息失败：服务器内部错误",
+		}
+		return res, err
+	} else if usr == nil {
+		res := &user.UserInfoResponse{
+			StatusCode: -1,
+			StatusMsg:  "用户名不存在",
+		}
+		return res, nil
+	} else {
+		res := &user.UserInfoResponse{
+			StatusCode: 0,
+			StatusMsg:  "success",
+			User: &user.User{
+				Id:             uint64(usr.ID),
+				Name:           usr.UserName,
+				FollowerCount:  usr.FollowerCount,
+				FollowingCount: usr.FollowingCount,
+			},
+		}
+		return res, nil
+	}
 }

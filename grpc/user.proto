@@ -17,7 +17,7 @@ message UserRegisterResponse{
   // @gotags: json:"status_msg"
   string status_msg = 2;
   // @gotags: json:"user_id"
-  int64 user_id = 3;
+  uint64 user_id = 3;
   // @gotags: json:"token"
   string token = 4;
 }
@@ -35,7 +35,7 @@ message UserLoginResponse {
   // @gotags: json:"status_msg"
   string status_msg = 2;
   // @gotags: json:"user_id"
-  int64 user_id = 3;
+  uint64 user_id = 3;
   // @gotags: json:"token"
   string token = 4;
 }
@@ -43,18 +43,18 @@ message UserLoginResponse {
 //  ==========================用户信息============================
 message User {
   // @gotags: json:"id"
-  int64 id = 1;
+  uint64 id = 1;
   // @gotags: json:"name"
   string name = 2;
   // @gotags: json:"following_count"
-  string following_count = 3;
+  uint64 following_count = 3;
   // @gotags: json:"follower_count"
-  string follower_count = 4;
+  uint64 follower_count = 4;
 
 }
 message UserInfoRequest {
   // @gotags: json:"user_id" form:"user_id" validate:"required" binding:"required"
-  int64 user_id = 1;
+  uint64 user_id = 1;
   // @gotags: json:"token" form:"token" binding:"required"
   string token = 2;
 }

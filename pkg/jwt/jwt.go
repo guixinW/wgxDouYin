@@ -4,7 +4,6 @@ package jwt
 import (
 	"crypto/ecdsa"
 	"errors"
-	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -41,7 +40,6 @@ func ParseToken(publicKey *ecdsa.PublicKey, tokenString string) (*CustomClaims, 
 		}
 		return publicKey, nil
 	})
-	fmt.Printf("parse claim:%v\n", token.Claims.(*CustomClaims))
 	switch {
 	case token == nil:
 		return nil, jwt.ErrInvalidKey

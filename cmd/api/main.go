@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"net/http"
 	"wgxDouYin/cmd/api/handler"
 	"wgxDouYin/cmd/api/rpc"
 	"wgxDouYin/pkg/middleware"
@@ -28,11 +27,7 @@ func InitRouter() *gin.Engine {
 		{
 			user.POST("/register/", handler.UserRegister)
 			user.POST("/login/", handler.UserLogin)
-			user.GET("/", func(c *gin.Context) {
-				c.JSON(http.StatusOK, map[string]string{
-					"msg": "test requests.",
-				})
-			})
+			user.GET("/", handler.UserInform)
 		}
 	}
 	return router
