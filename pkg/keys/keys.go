@@ -10,11 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"wgxDouYin/pkg/zap"
-)
-
-var (
-	logger = zap.InitLogger()
 )
 
 // CreateKeyPair 创建一个私钥，并通过这个私钥返回公钥
@@ -27,32 +22,30 @@ func CreateKeyPair() (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 	return privateKey, publicKey, nil
 }
 
-//func SavePrivateKey(path string, privateKey *ecdsa.PrivateKey) error {
-//	keyBytes, err := x509.MarshalECPrivateKey(privateKey)
-//	if err != nil {
-//		return fmt.Errorf("failed to marshal ECDSA private key: %w", err)
-//	}
-//	block := &pem.Block{
-//		Type:  "EC PRIVATE KEY",
-//		Bytes: keyBytes,
-//	}
-//	file, err := os.Create(path)
-//	if err != nil {
-//		return fmt.Errorf("failed to create key file: %w", err)
-//	}
-//	defer func(file *os.File) {
-//		err := file.Close()
-//		if err != nil {
-//			log.Fatalf("failed to close key file: %v", err)
-//		}
-//	}(file)
-//	err = pem.Encode(file, block)
-//	if err != nil {
-//		return fmt.Errorf("failed to write ECDSA key to file: %w", err)
-//	}
-//
-//	return nil
-//}
+func SavePrivateKey(path string, privateKey *ecdsa.PrivateKey) error {
+	keyBytes, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		return fmt.Errorf("failed to marshal ECDSA private key: %w", err)
+	}
+	block := &pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: keyBytes,
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("failed to create key file: %w", err)
+	}
+	defer func(file *os.File) error {
+		err := file.Close()
+		return err
+	}(file)
+	err = pem.Encode(file, block)
+	if err != nil {
+		return fmt.Errorf("failed to write ECDSA key to file: %w", err)
+	}
+
+	return nil
+}
 
 func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
 	data, err := os.ReadFile(path)
@@ -75,7 +68,6 @@ func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
 }
 
 func PublicKeyToPEM(publicKey *ecdsa.PublicKey) (string, error) {
-	fmt.Printf("public key curve:%v\n", publicKey.Curve)
 	derBytes, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
 		return "", err

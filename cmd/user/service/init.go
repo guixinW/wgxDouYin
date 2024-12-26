@@ -3,10 +3,12 @@ package service
 import (
 	"crypto/ecdsa"
 	"wgxDouYin/pkg/keys"
+	"wgxDouYin/pkg/zap"
 )
 
 var (
 	KeyManager *keys.KeyManager
+	logger     = zap.InitLogger()
 )
 
 func Init(privateKey *ecdsa.PrivateKey, serviceName string) error {

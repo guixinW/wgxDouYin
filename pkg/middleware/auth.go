@@ -9,15 +9,8 @@ import (
 	"wgxDouYin/pkg/keys"
 )
 
-func getServerName(path string) string {
-	if strings.HasPrefix(path, "/wgxDouYin/user/") {
-		return etcd.KeyPrefix("wgxDouYinUserServer")
-	}
-	return ""
-}
-
 // TokenAuthMiddleware JWT验证中间件.skipRoutes为无需验证的请求
-func TokenAuthMiddleware(keys *keys.KeyManager, skipRoutes ...string) gin.HandlerFunc {
+func TokenAuthMiddleware(serviceNameMap map[string]string, keys *keys.KeyManager, skipRoutes ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		for _, skipRoute := range skipRoutes {
 			if 0 == strings.Compare(c.FullPath(), skipRoute) {
@@ -36,7 +29,7 @@ func TokenAuthMiddleware(keys *keys.KeyManager, skipRoutes ...string) gin.Handle
 			return
 		}
 		tokenString := authParts[1]
-		publicKey, err := keys.GetServerPublicKey(getServerName(c.Request.URL.Path))
+		publicKey, err := keys.GetServerPublicKey(etcd.KeyPrefix(serviceNameMap[c.Request.URL.Path]))
 		if err != nil {
 			responseWithError(c, http.StatusUnauthorized, err.Error())
 			return

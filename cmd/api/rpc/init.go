@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/resolver"
@@ -25,32 +26,43 @@ func init() {
 	TikTokResolver = &etcd.TikTokServiceResolver{}
 	resolver.Register(TikTokResolver)
 	if err != nil {
-		logger.Errorln(err.Error())
+		logger.Errorln(errors.Wrap(err, "init error"))
 	}
 	userConfig := viper.Init("user")
 	InitUser(&userConfig)
 }
 
-// initClient this function connect to rpc server by service name. service name will be
+func errorHandler(err error, msg string) {
+	if err != nil {
+		logger.Errorln(errors.Wrap(err, msg))
+	}
+}
+
+// initClient this function connect to rpc service by service name. service name will be
 // resolved by resolver that is init by InitUser.
 func initClient(etcdAddress []string, serviceName string, client interface{}) {
+	var err error
+	errMsg := "initClient failed"
+
 	if QueryTool == nil {
-		var err error
 		QueryTool, err = etcd.NewQueryTool(etcdAddress)
-		if err != nil {
-			logger.Errorln(err.Error())
-		}
+		errorHandler(err, errMsg)
 		QueryTool.RegisterUpdater(etcd.KeyPrefix(serviceName), KeysManager)
 		QueryTool.RegisterUpdater(etcd.AddrPrefix(serviceName), TikTokResolver)
-		go QueryTool.Watch(etcd.KeyPrefix(serviceName))
-		go QueryTool.Watch(etcd.AddrPrefix(serviceName))
+		go func() {
+			err := QueryTool.Watch(etcd.KeyPrefix(serviceName))
+			errorHandler(err, errMsg)
+		}()
+		go func() {
+			err := QueryTool.Watch(etcd.AddrPrefix(serviceName))
+			errorHandler(err, errMsg)
+		}()
 	} else {
 		QueryTool.SetQuerySourceAddress(etcdAddress)
 	}
+
 	conn, err := connectServer(serviceName)
-	if err != nil {
-		panic(err)
-	}
+	errorHandler(err, errMsg)
 	switch c := client.(type) {
 	case *user.UserServiceClient:
 		*c = user.NewUserServiceClient(conn)
@@ -65,7 +77,6 @@ func connectServer(serviceName string) (conn *grpc.ClientConn, err error) {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 	addr := fmt.Sprintf("%s:///%s", "etcd", etcd.AddrPrefix(serviceName))
-	fmt.Printf("connect addr %v\n", addr)
 	conn, err = grpc.NewClient(addr, opts...)
 	return
 }

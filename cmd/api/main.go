@@ -7,21 +7,35 @@ import (
 	"wgxDouYin/cmd/api/rpc"
 	"wgxDouYin/pkg/middleware"
 	"wgxDouYin/pkg/viper"
+	"wgxDouYin/pkg/zap"
 )
 
 var (
 	apiConfig     = viper.Init("api")
-	apiServerAddr = fmt.Sprintf("%s:%d", apiConfig.Viper.GetString("server.host"), apiConfig.Viper.GetInt("server.port"))
+	apiServerAddr = fmt.Sprintf("%s:%d", apiConfig.Viper.GetString("service.host"), apiConfig.Viper.GetInt("service.port"))
 	skipRoutes    = []string{
-		"/wgxDouYin/user/register/",
-		"/wgxDouYin/user/login/",
+		"/wgxdouyin/user/register/",
+		"/wgxdouyin/user/login/",
 	}
+	ServiceNameMap map[string]string
+	logger         = zap.InitLogger()
 )
+
+func init() {
+	if err := apiConfig.Viper.UnmarshalKey("otherService", &ServiceNameMap); err != nil {
+		panic(err)
+	}
+	fmt.Printf("service name map:%v\n", ServiceNameMap)
+}
 
 func InitRouter() *gin.Engine {
 	router := gin.Default()
-	v1 := router.Group("/wgxDouYin")
-	v1.Use(middleware.TokenAuthMiddleware(rpc.KeysManager, skipRoutes...))
+	err := router.SetTrustedProxies(nil)
+	if err != nil {
+		panic(err)
+	}
+	v1 := router.Group("/wgxdouyin")
+	v1.Use(middleware.TokenAuthMiddleware(ServiceNameMap, rpc.KeysManager, skipRoutes...))
 	{
 		user := v1.Group("/user")
 		{

@@ -2,7 +2,7 @@ package keys
 
 import (
 	"crypto/ecdsa"
-	"errors"
+	"github.com/pkg/errors"
 	"time"
 )
 
@@ -30,19 +30,20 @@ func NewKeyManager(privateKey *ecdsa.PrivateKey, serverName string) (*KeyManager
 		serverToPublicKey: map[string]*ecdsa.PublicKey{serverName: &privateKey.PublicKey}}, nil
 }
 
-func (j *KeyManager) Update(key, value []byte) {
+func (j *KeyManager) Update(key, value []byte) error {
 	publicKey, err := PEMToPublicKey(string(value))
 	if err != nil {
-		logger.Errorln(err.Error())
+		return errors.Wrap(err, "KeyManager.Update failed")
 	}
 	j.serverToPublicKey[string(key)] = publicKey
+	return nil
 }
 
 // GetServerPublicKey retrieves the public key associated with specified service.
 func (j *KeyManager) GetServerPublicKey(serverName string) (*ecdsa.PublicKey, error) {
 	serverPublicKey, ok := j.serverToPublicKey[serverName]
 	if !ok {
-		return nil, errors.New("can't find server's public key")
+		return nil, errors.New("can't find service's public key")
 	}
 	return serverPublicKey, nil
 }

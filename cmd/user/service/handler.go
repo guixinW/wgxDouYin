@@ -17,7 +17,6 @@ type UserServerImpl struct {
 }
 
 func (s *UserServerImpl) UserRegister(ctx context.Context, req *user.UserRegisterRequest) (resp *user.UserRegisterResponse, err error) {
-	logger := zap.InitLogger()
 	usr, err := db.GetUserByName(ctx, req.Username)
 	if err != nil {
 		logger.Errorln(err.Error())
@@ -25,7 +24,7 @@ func (s *UserServerImpl) UserRegister(ctx context.Context, req *user.UserRegiste
 			StatusCode: -1,
 			StatusMsg:  "注册失败，getUserByName服务器内部错误",
 		}
-		return res, nil
+		return res, err
 	} else if usr != nil {
 		logger.Errorf("该用户名已存在:%s", usr.UserName)
 		res := &user.UserRegisterResponse{

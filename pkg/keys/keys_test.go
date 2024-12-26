@@ -117,3 +117,14 @@ func TestLoadKeyParse(t *testing.T) {
 		t.Fatalf("orignal key parse error")
 	}
 }
+
+func TestSaveKeys(t *testing.T) {
+	privateKey, _, err := CreateKeyPair()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	err = SavePrivateKey("FavoriteService.pem", privateKey)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+}

@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	config      = viper.Init("user")
+	config      = viper.Init("relation")
 	serviceName = config.Viper.GetString("service.name")
 	serviceAddr = fmt.Sprintf("%s:%d", config.Viper.GetString("service.host"),
 		config.Viper.GetInt("service.port"))
@@ -25,7 +25,6 @@ var (
 )
 
 func init() {
-	fmt.Printf("service name:%v\n", serviceName)
 	privateKeyPath := fmt.Sprintf("keys/%v.pem", serviceName)
 	privateKey, err := keys.LoadPrivateKey(privateKeyPath)
 	if err != nil {
@@ -46,15 +45,14 @@ func main() {
 		logger.Fatalln("cant register service")
 		return
 	}
+
 	servicePublicKey, err := service.KeyManager.GetServerPublicKey(serviceName)
-	if err != nil {
+	if err != nil || servicePublicKey == nil {
 		logger.Fatalln("cant get service public key")
-		return
 	}
 	err = r.Register(serviceName, rpcAddr, servicePublicKey)
 	if err != nil {
 		logger.Fatalln(err.Error())
-		return
 	}
 	defer func(r *etcd.ServiceRegistry) {
 		err := r.Close()
@@ -68,10 +66,8 @@ func main() {
 	fmt.Printf("listen %v\n", serviceAddr)
 	if err != nil {
 		logger.Fatalf("failed to listen:%v\n", err)
-		return
 	}
 	if err := server.Serve(lis); err != nil {
 		logger.Fatalf("failed to serve:%v", err)
-		return
 	}
 }
