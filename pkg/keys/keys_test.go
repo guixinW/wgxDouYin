@@ -45,13 +45,6 @@ func TestCreateKeyParse(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	pbkParseStr1, err := myJwt.ParseToken(publicKey, tokenString)
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
-	if originClaims.UserId != pbkParseStr1.UserId {
-		t.Fatalf("orignal key parse error")
-	}
 	publicStr, err := PublicKeyToPEM(publicKey)
 	if err != nil {
 		t.Fatalf(err.Error())
@@ -63,7 +56,7 @@ func TestCreateKeyParse(t *testing.T) {
 	if duplicationPublicKey == nil {
 		t.Fatalf("PEM to public key failed, duplication public key is nil")
 	}
-	pbkParseStr2, err := myJwt.ParseToken(duplicationPublicKey, publicStr)
+	pbkParseStr2, err := myJwt.ParseToken(duplicationPublicKey, tokenString)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

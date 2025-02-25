@@ -43,7 +43,6 @@ func SavePrivateKey(path string, privateKey *ecdsa.PrivateKey) error {
 	if err != nil {
 		return fmt.Errorf("failed to write ECDSA key to file: %w", err)
 	}
-
 	return nil
 }
 
@@ -63,7 +62,6 @@ func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse ECDSA private key: %w", err)
 	}
-
 	return privateKey, nil
 }
 

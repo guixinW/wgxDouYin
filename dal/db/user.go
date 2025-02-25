@@ -20,6 +20,8 @@ func (User) TableName() string {
 	return "users"
 }
 
+// GetUserByID
+// 根据用户id获取用户
 func GetUserByID(ctx context.Context, userID uint64) (*User, error) {
 	res := new(User)
 	if err := GetDB().Clauses(dbresolver.Read).WithContext(ctx).First(&res, userID).Error; err == nil {
@@ -31,6 +33,21 @@ func GetUserByID(ctx context.Context, userID uint64) (*User, error) {
 	}
 }
 
+// GetUserByIDs
+// 根据用户id列表获取用户列表
+func GetUserByIDs(ctx context.Context, userIDs []uint64) ([]*User, error) {
+	res := make([]*User, 0)
+	if len(userIDs) == 0 {
+		return res, nil
+	}
+	if err := GetDB().WithContext(ctx).Where("id in ?", userIDs).Find(&res).Error; err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// GetUserByName
+// 根据用户名获取用户信息
 func GetUserByName(ctx context.Context, userName string) (*User, error) {
 	res := new(User)
 	if err := GetDB().Clauses(dbresolver.Read).WithContext(ctx).Select("id, user_name, password").Where("user_name = ?", userName).First(&res).Error; err == nil {
@@ -42,6 +59,8 @@ func GetUserByName(ctx context.Context, userName string) (*User, error) {
 	}
 }
 
+// CreateUser
+// 创建用户
 func CreateUser(ctx context.Context, user *User) error {
 	err := GetDB().Clauses(dbresolver.Write).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(user).Error; err != nil {

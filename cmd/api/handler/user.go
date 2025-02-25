@@ -5,14 +5,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"wgxDouYin/cmd/api/rpc"
-	grpc "wgxDouYin/grpc/user"
+	userGrpc "wgxDouYin/grpc/user"
 	"wgxDouYin/internal/response"
 )
 
 func UserRegister(c *gin.Context) {
-	userName := c.Query("username")
-	password := c.Query("password")
-
+	userName := c.PostForm("username")
+	password := c.PostForm("password")
 	if len(userName) == 0 || len(password) == 0 {
 		c.JSON(http.StatusBadRequest, response.Register{
 			Base: response.Base{
@@ -31,7 +30,7 @@ func UserRegister(c *gin.Context) {
 		})
 		return
 	}
-	req := &grpc.UserRegisterRequest{
+	req := &userGrpc.UserRegisterRequest{
 		Username: userName,
 		Password: password,
 	}
@@ -60,9 +59,9 @@ func UserRegister(c *gin.Context) {
 }
 
 func UserLogin(c *gin.Context) {
-	username := c.Query("username")
-	password := c.Query("password")
-	if len(username) == 0 || len(password) == 0 {
+	userName := c.PostForm("username")
+	password := c.PostForm("password")
+	if len(userName) == 0 || len(password) == 0 {
 		c.JSON(http.StatusBadRequest, response.Login{
 			Base: response.Base{
 				StatusCode: -1,
@@ -71,11 +70,20 @@ func UserLogin(c *gin.Context) {
 		})
 		return
 	}
-	req := &grpc.UserLoginRequest{
-		Username: username,
+	req := &userGrpc.UserLoginRequest{
+		Username: userName,
 		Password: password,
 	}
-	res, _ := rpc.Login(c, req)
+	res, err := rpc.Login(c, req)
+	if res == nil {
+		c.JSON(http.StatusOK, response.Login{
+			Base: response.Base{
+				StatusCode: -1,
+				StatusMsg:  fmt.Sprintf("server request error:%v\n", err),
+			},
+		})
+		return
+	}
 	if res.StatusCode == -1 {
 		c.JSON(http.StatusOK, response.Login{
 			Base: response.Base{
@@ -108,7 +116,7 @@ func UserInform(c *gin.Context) {
 		return
 	}
 	id := userId.(uint64)
-	req := &grpc.UserInfoRequest{
+	req := &userGrpc.UserInfoRequest{
 		UserId: id,
 		Token:  "",
 	}

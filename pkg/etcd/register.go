@@ -64,7 +64,6 @@ func (e *ServiceRegistry) Register(serviceName, serviceAddr string, servicePubli
 			return err
 		}
 	}
-
 	//将service的公钥存入etcd
 	if servicePublicKey.Curve != nil {
 		servicePublicKeyString, err := keys.PublicKeyToPEM(servicePublicKey)

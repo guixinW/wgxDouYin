@@ -3,6 +3,7 @@ package keys
 import (
 	"crypto/ecdsa"
 	"github.com/pkg/errors"
+	"sync"
 	"time"
 )
 
@@ -10,8 +11,24 @@ var (
 	timeout = time.Duration(1)
 )
 
+type ServerToKeyMap struct {
+	data sync.Map
+}
+
+func (p *ServerToKeyMap) Store(key string, value *ecdsa.PublicKey) {
+	p.data.Store(key, value)
+}
+
+func (p *ServerToKeyMap) Load(key string) (*ecdsa.PublicKey, bool) {
+	value, ok := p.data.Load(key)
+	if !ok {
+		return nil, false
+	}
+	return value.(*ecdsa.PublicKey), true
+}
+
 type KeyManager struct {
-	serverToPublicKey map[string]*ecdsa.PublicKey
+	serverToPublicKey ServerToKeyMap
 	serverPrivateKey  *ecdsa.PrivateKey
 }
 
@@ -22,46 +39,59 @@ type KeyManager struct {
 func NewKeyManager(privateKey *ecdsa.PrivateKey, serverName string) (*KeyManager, error) {
 	if privateKey == nil {
 		var keyManager KeyManager
-		keyManager.serverToPublicKey = make(map[string]*ecdsa.PublicKey)
 		keyManager.serverPrivateKey = nil
 		return &keyManager, nil
 	}
-	return &KeyManager{serverPrivateKey: privateKey,
-		serverToPublicKey: map[string]*ecdsa.PublicKey{serverName: &privateKey.PublicKey}}, nil
+	newKeyManager := KeyManager{}
+	newKeyManager.serverToPublicKey = ServerToKeyMap{}
+	newKeyManager.serverPrivateKey = privateKey
+	err := newKeyManager.addServerPublicKey(serverName, &privateKey.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	return &newKeyManager, nil
 }
 
 func (j *KeyManager) Update(key, value []byte) error {
 	publicKey, err := PEMToPublicKey(string(value))
+	serverName := string(key)
 	if err != nil {
 		return errors.Wrap(err, "KeyManager.Update failed")
 	}
-	j.serverToPublicKey[string(key)] = publicKey
+	err = j.addServerPublicKey(serverName, publicKey)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-// GetServerPublicKey retrieves the public key associated with specified service.
+// GetServerPublicKey 获取服务的公钥
 func (j *KeyManager) GetServerPublicKey(serverName string) (*ecdsa.PublicKey, error) {
-	serverPublicKey, ok := j.serverToPublicKey[serverName]
+	serverPublicKey, ok := j.serverToPublicKey.Load(serverName)
 	if !ok {
 		return nil, errors.New("can't find service's public key")
 	}
 	return serverPublicKey, nil
 }
 
-// GetPrivateKey get the KeyManager private key.
+// GetPrivateKey 获取使用该KeyManager的服务私钥
 func (j *KeyManager) GetPrivateKey() *ecdsa.PrivateKey {
-	return j.serverPrivateKey
+	if j != nil {
+		return j.serverPrivateKey
+	}
+	return nil
 }
 
-// addServerPublicKey saves the public key associated with specified service.
+// addServerPublicKey 通过服务名保存公钥
 func (j *KeyManager) addServerPublicKey(serverName string, serverPublicKey *ecdsa.PublicKey) error {
 	if j == nil {
 		return errors.New("KeyManager is nil object")
 	}
-	j.serverToPublicKey[serverName] = serverPublicKey
+	if key, ok := j.serverToPublicKey.Load(serverName); ok {
+		if key == serverPublicKey {
+			return nil
+		}
+	}
+	j.serverToPublicKey.Store(serverName, serverPublicKey)
 	return nil
-}
-
-func (j *KeyManager) updatePublicKey(serverName string, publicKey *ecdsa.PublicKey) {
-	j.serverToPublicKey[serverName] = publicKey
 }

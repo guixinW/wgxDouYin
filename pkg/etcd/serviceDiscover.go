@@ -1,6 +1,7 @@
 package etcd
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/resolver"
 )
@@ -12,14 +13,15 @@ var (
 type TikTokServiceResolver struct {
 	target  resolver.Target
 	cc      resolver.ClientConn
-	address []resolver.Address
+	address map[string]resolver.Address
 }
 
 func (r *TikTokServiceResolver) Update(key, value []byte) error {
 	if r.address == nil {
-		r.address = make([]resolver.Address, 0)
+		r.address = make(map[string]resolver.Address)
 	}
-	r.address = append(r.address, resolver.Address{ServerName: string(key), Addr: string(value)})
+	r.address[string(key)] = resolver.Address{ServerName: string(key), Addr: string(value)}
+	fmt.Println(r.address)
 	return nil
 }
 
@@ -42,7 +44,11 @@ func (r *TikTokServiceResolver) ResolveNow(options resolver.ResolveNowOptions) {
 func (r *TikTokServiceResolver) Close() {}
 
 func (r *TikTokServiceResolver) update() error {
-	err := r.cc.UpdateState(resolver.State{Addresses: r.address})
+	var updateAddress []resolver.Address
+	for _, value := range r.address {
+		updateAddress = append(updateAddress, value)
+	}
+	err := r.cc.UpdateState(resolver.State{Addresses: updateAddress})
 	if err != nil {
 		return errors.Wrap(err, "TikTokServiceResolver update failed")
 	}

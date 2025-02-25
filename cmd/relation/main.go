@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"net"
-	"wgxDouYin/cmd/user/service"
-	userPb "wgxDouYin/grpc/user"
+	"wgxDouYin/cmd/relation/service"
+	relationPb "wgxDouYin/grpc/relation"
 	"wgxDouYin/pkg/etcd"
 	"wgxDouYin/pkg/keys"
 	"wgxDouYin/pkg/viper"
@@ -24,50 +25,41 @@ var (
 	logger = zap.InitLogger()
 )
 
-func init() {
-	privateKeyPath := fmt.Sprintf("keys/%v.pem", serviceName)
-	privateKey, err := keys.LoadPrivateKey(privateKeyPath)
+func errorHandler(err error, errMsg string) {
 	if err != nil {
-		logger.Errorln(err.Error())
-	}
-	err = service.Init(privateKey, serviceName)
-	if err != nil {
-		logger.Errorln(err.Error())
+		logger.Errorln(errors.Wrap(err, errMsg))
 	}
 }
 
-func main() {
-	r, err := etcd.NewServiceRegistry([]string{etcdAddr})
-	if err != nil {
-		logger.Fatalln(err.Error())
-	}
-	if r == nil {
-		logger.Fatalln("cant register service")
-		return
-	}
+func init() {
+	errMsg := "init failed"
+	privateKeyPath := fmt.Sprintf("keys/%v.pem", serviceName)
+	privateKey, err := keys.LoadPrivateKey(privateKeyPath)
+	errorHandler(err, errMsg)
+	err = service.Init(privateKey, serviceName)
+	errorHandler(err, errMsg)
+}
 
-	servicePublicKey, err := service.KeyManager.GetServerPublicKey(serviceName)
-	if err != nil || servicePublicKey == nil {
-		logger.Fatalln("cant get service public key")
-	}
-	err = r.Register(serviceName, rpcAddr, servicePublicKey)
-	if err != nil {
-		logger.Fatalln(err.Error())
-	}
+func main() {
+	errMsg := "relation service failed"
+	r, err := etcd.NewServiceRegistry([]string{etcdAddr})
 	defer func(r *etcd.ServiceRegistry) {
 		err := r.Close()
-		if err != nil {
-			logger.Fatalln(err.Error())
-		}
+		errorHandler(err, errMsg)
 	}(r)
+	errorHandler(err, errMsg)
+
+	servicePublicKey, err := service.KeyManager.GetServerPublicKey(serviceName)
+	errorHandler(err, errMsg)
+	err = r.Register(serviceName, rpcAddr, servicePublicKey)
+	errorHandler(err, errMsg)
+
 	server := grpc.NewServer()
-	userPb.RegisterUserServiceServer(server, &service.UserServerImpl{})
+	relationPb.RegisterRelationServiceServer(server, &service.RelationServiceImpl{})
 	lis, err := net.Listen("tcp", serviceAddr)
+	errorHandler(err, errMsg)
 	fmt.Printf("listen %v\n", serviceAddr)
-	if err != nil {
-		logger.Fatalf("failed to listen:%v\n", err)
-	}
-	if err := server.Serve(lis); err != nil {
-		logger.Fatalf("failed to serve:%v", err)
-	}
+
+	err = server.Serve(lis)
+	errorHandler(err, errMsg)
 }

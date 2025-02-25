@@ -5,18 +5,17 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"time"
 	"wgxDouYin/dal/db"
-	"wgxDouYin/grpc/user"
-	pb "wgxDouYin/grpc/user"
+	user "wgxDouYin/grpc/user"
 	"wgxDouYin/internal/tool"
 	myJwt "wgxDouYin/pkg/jwt"
 	"wgxDouYin/pkg/zap"
 )
 
-type UserServerImpl struct {
-	pb.UnimplementedUserServiceServer
+type UserServiceImpl struct {
+	user.UnimplementedUserServiceServer
 }
 
-func (s *UserServerImpl) UserRegister(ctx context.Context, req *user.UserRegisterRequest) (resp *user.UserRegisterResponse, err error) {
+func (s *UserServiceImpl) UserRegister(ctx context.Context, req *user.UserRegisterRequest) (resp *user.UserRegisterResponse, err error) {
 	usr, err := db.GetUserByName(ctx, req.Username)
 	if err != nil {
 		logger.Errorln(err.Error())
@@ -54,7 +53,7 @@ func (s *UserServerImpl) UserRegister(ctx context.Context, req *user.UserRegiste
 	return res, nil
 }
 
-func (s *UserServerImpl) Login(ctx context.Context, req *user.UserLoginRequest) (resp *user.UserLoginResponse, err error) {
+func (s *UserServiceImpl) Login(ctx context.Context, req *user.UserLoginRequest) (resp *user.UserLoginResponse, err error) {
 	logger := zap.InitLogger()
 	usr, err := db.GetUserByName(ctx, req.Username)
 	if err != nil {
@@ -82,7 +81,7 @@ func (s *UserServerImpl) Login(ctx context.Context, req *user.UserLoginRequest) 
 	claims := myJwt.CustomClaims{
 		UserId: uint64(usr.ID),
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(72 * time.Hour)),
 			Issuer:    "Login",
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
@@ -105,7 +104,7 @@ func (s *UserServerImpl) Login(ctx context.Context, req *user.UserLoginRequest) 
 	return res, nil
 }
 
-func (s *UserServerImpl) UserInfo(ctx context.Context, req *user.UserInfoRequest) (resp *user.UserInfoResponse, err error) {
+func (s *UserServiceImpl) UserInfo(ctx context.Context, req *user.UserInfoRequest) (resp *user.UserInfoResponse, err error) {
 	logger := zap.InitLogger()
 	usr, err := db.GetUserByID(ctx, req.UserId)
 	if err != nil {

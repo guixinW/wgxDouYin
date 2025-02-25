@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
@@ -10,8 +11,12 @@ import (
 )
 
 // TokenAuthMiddleware JWT验证中间件.skipRoutes为无需验证的请求
-func TokenAuthMiddleware(serviceNameMap map[string]string, keys *keys.KeyManager, skipRoutes ...string) gin.HandlerFunc {
+func TokenAuthMiddleware(serviceDependencyMap map[string]string, keys *keys.KeyManager, skipRoutes ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		serviceName, err := getServiceName(c.FullPath())
+		if err != nil {
+			responseWithError(c, http.StatusUnauthorized, err)
+		}
 		for _, skipRoute := range skipRoutes {
 			if 0 == strings.Compare(c.FullPath(), skipRoute) {
 				c.Next()
@@ -29,7 +34,8 @@ func TokenAuthMiddleware(serviceNameMap map[string]string, keys *keys.KeyManager
 			return
 		}
 		tokenString := authParts[1]
-		publicKey, err := keys.GetServerPublicKey(etcd.KeyPrefix(serviceNameMap[c.Request.URL.Path]))
+		dependencyService := serviceDependencyMap[serviceName]
+		publicKey, err := keys.GetServerPublicKey(etcd.KeyPrefix(dependencyService))
 		if err != nil {
 			responseWithError(c, http.StatusUnauthorized, err.Error())
 			return
@@ -46,4 +52,14 @@ func TokenAuthMiddleware(serviceNameMap map[string]string, keys *keys.KeyManager
 		c.Set("UserID", claim.UserId)
 		c.Next()
 	}
+}
+
+func getServiceName(path string) (string, error) {
+	trimmedPath := strings.Trim(path, "/")
+	parts := strings.Split(trimmedPath, "/")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("invalid path format: %s", path)
+	}
+	serviceName := parts[1]
+	return serviceName, nil
 }

@@ -17,15 +17,18 @@ var (
 		"/wgxdouyin/user/register/",
 		"/wgxdouyin/user/login/",
 	}
-	ServiceNameMap map[string]string
-	logger         = zap.InitLogger()
+	ServiceNameMap       map[string]string
+	ServiceDependencyMap map[string]string
+	logger               = zap.InitLogger()
 )
 
 func init() {
 	if err := apiConfig.Viper.UnmarshalKey("otherService", &ServiceNameMap); err != nil {
 		panic(err)
 	}
-	fmt.Printf("service name map:%v\n", ServiceNameMap)
+	if err := apiConfig.Viper.UnmarshalKey("serviceDependency", &ServiceDependencyMap); err != nil {
+		panic(err)
+	}
 }
 
 func InitRouter() *gin.Engine {
@@ -34,14 +37,21 @@ func InitRouter() *gin.Engine {
 	if err != nil {
 		panic(err)
 	}
-	v1 := router.Group("/wgxdouyin")
-	v1.Use(middleware.TokenAuthMiddleware(ServiceNameMap, rpc.KeysManager, skipRoutes...))
+	wgxDouYin := router.Group("/wgxdouyin")
+	wgxDouYin.Use(middleware.TokenAuthMiddleware(ServiceDependencyMap, rpc.KeysManager, skipRoutes...))
 	{
-		user := v1.Group("/user")
+		user := wgxDouYin.Group("/user")
 		{
 			user.POST("/register/", handler.UserRegister)
 			user.POST("/login/", handler.UserLogin)
 			user.GET("/", handler.UserInform)
+		}
+		relation := wgxDouYin.Group("/relation")
+		{
+			relation.POST("/action/", handler.RelationAction)
+			relation.POST("/friend/list/", handler.FriendList)
+			relation.POST("/follow/list", handler.FollowList)
+			relation.POST("/follower/list", handler.FollowerList)
 		}
 	}
 	return router

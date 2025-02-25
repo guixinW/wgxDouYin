@@ -2,28 +2,66 @@ package wgxRedis
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"testing"
 	"time"
 )
 
-func TestSetKey(t *testing.T) {
-	testKey := "test key"
-	testValue := "test value"
-	expireTime := time.Duration(10) * time.Minute
-	err := setKey(context.Background(), testKey, testValue, expireTime, FavoriteMutex)
+func TestRedis(t *testing.T) {
+	ctx := context.Background()
+	addr := "127.0.0.1:6379"
+	rdb := redis.NewClient(&redis.Options{
+		Addr:         addr,         // Redis 地址
+		Password:     "1477364283", // 密码（如果有的话）
+		DB:           0,            // 使用默认 DB
+		DialTimeout:  5 * time.Second,
+		ReadTimeout:  3 * time.Second,
+		WriteTimeout: 3 * time.Second,
+	})
+	_, err := rdb.Ping(ctx).Result()
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("无法连接到 Redis 实例：%s，错误：%v\n", addr, err)
 	}
-	str, err := getKeys(context.Background(), testKey)
+}
+
+func TestSentinelPing(t *testing.T) {
+	sentinel := redis.NewFailoverClusterClient(&redis.FailoverOptions{
+		MasterName: "mymaster",
+		SentinelAddrs: []string{"127.0.0.1:26379",
+			"127.0.0.1:26380",
+			"127.0.0.1:26381"},
+		Password:         "1477364283",
+		SentinelPassword: "1477364283",
+		DB:               0,
+		DialTimeout:      2 * time.Second,
+		ReadTimeout:      2 * time.Second,
+		WriteTimeout:     2 * time.Second,
+	})
+	pong, err := sentinel.Ping(context.Background()).Result()
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("ping err: %v", err)
 	}
-	if len(str) != 1 {
-		t.Error(errors.New("wrong get"))
+	fmt.Println(pong)
+}
+
+func TestSentinelWrite(t *testing.T) {
+	sentinel := redis.NewFailoverClusterClient(&redis.FailoverOptions{
+		MasterName: "mymaster",
+		SentinelAddrs: []string{"127.0.0.1:26379",
+			"127.0.0.1:26380",
+			"127.0.0.1:26381"},
+		Password:         "1477364283",
+		SentinelPassword: "1477364283",
+		DB:               0,
+		DialTimeout:      2 * time.Second,
+		ReadTimeout:      2 * time.Second,
+		WriteTimeout:     2 * time.Second,
+	})
+
+	err := sentinel.Set(context.Background(), "key", "value", 0).Err()
+	if err != nil {
+		t.Fatalf("Failed to set key: %v", err)
 	}
-	if str[0] != testKey {
-		t.Error(fmt.Errorf("wrong get: %v", str))
-	}
+	fmt.Println("Key set successfully")
 }

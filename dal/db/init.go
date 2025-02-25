@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -22,6 +23,19 @@ var (
 		"relations": &FollowRelation{},
 	}
 )
+
+type DatabaseOperationType int
+
+const (
+	Add DatabaseOperationType = iota
+	Delete
+	Update
+	Find
+)
+
+func NewDatabaseErrorMessage(recordId uint64, functionName string, operationType DatabaseOperationType) error {
+	return errors.New(fmt.Sprintf("database %v failed on function %v, record_id %v\n", operationType, functionName, recordId))
+}
 
 func getDsn(driverWithRole string) string {
 	userName := config.Viper.GetString(fmt.Sprintf("%s.username", driverWithRole))
@@ -55,9 +69,9 @@ func init() {
 	if err != nil {
 		panic(err.Error())
 	}
-	//if err := db.AutoMigrate(&User{}, &Video{}, &Comment{}, &FollowRelation{}); err != nil {
-	//	zapLogger.Fatalln(err.Error())
-	//}
+	if err := db.AutoMigrate(&User{}, &Video{}, &Comment{}, &FollowRelation{}); err != nil {
+		zapLogger.Fatalln(err.Error())
+	}
 	_db, err := db.DB()
 	if err != nil {
 		zapLogger.Fatalln(err.Error())

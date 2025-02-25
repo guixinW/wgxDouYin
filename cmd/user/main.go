@@ -25,7 +25,6 @@ var (
 )
 
 func init() {
-	fmt.Printf("service name:%v\n", serviceName)
 	privateKeyPath := fmt.Sprintf("keys/%v.pem", serviceName)
 	privateKey, err := keys.LoadPrivateKey(privateKeyPath)
 	if err != nil {
@@ -63,7 +62,7 @@ func main() {
 		}
 	}(r)
 	server := grpc.NewServer()
-	userPb.RegisterUserServiceServer(server, &service.UserServerImpl{})
+	userPb.RegisterUserServiceServer(server, &service.UserServiceImpl{})
 	lis, err := net.Listen("tcp", serviceAddr)
 	fmt.Printf("listen %v\n", serviceAddr)
 	if err != nil {

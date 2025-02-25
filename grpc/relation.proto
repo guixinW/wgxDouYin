@@ -1,0 +1,114 @@
+syntax="proto3";
+option go_package="./relation";
+package relation;
+import "user.proto";
+
+//  =========================关注以及取消关注============================
+enum ActionType {
+  // 关注
+  FOLLOW = 0;
+  // 取消关注
+  UN_FOLLOW = 1;
+}
+
+message RelationActionRequest {
+  // @gotags: json:"to_user_id"
+  uint64 to_user_id = 1;
+  // @gotags: json:"action_type"
+  ActionType action_type = 2;
+  // @gotags: json:"token_user_id"
+  uint64 token_user_id = 3;
+}
+
+message RelationActionResponse {
+  // @gotags: json:"status_code"
+  int32 status_code = 1;
+  // @gotags: json:"status_msg"
+  string status_msg = 2;
+}
+
+//  =========================关注列表============================
+message RelationFollowListRequest {
+  // @gotags: json:"user_id"
+  uint64 user_id = 1;
+  // @gotags: json:"token_user_id"
+  uint64 token_user_id = 2;
+}
+message RelationFollowListResponse {
+  // @gotags: json:"user_id"
+  int32 status_code = 1;
+  // @gotags: json:"status_msg"
+  string status_msg = 2;
+  // @gotags: json:"user_list"
+  repeated user.User user_list = 3;
+}
+
+//  =========================粉丝列表============================
+message RelationFollowerListRequest {
+  // @gotags: json:"user_id"
+  uint64 user_id = 1;
+  // @gotags: json:"token_user_id"
+  uint64 token_user_id = 2;
+}
+message RelationFollowerListResponse {
+  // @gotags: json:"status_code"
+  int32 status_code = 1;
+  // @gotags: json:"status_msg"
+  string status_msg = 2;
+  // @gotags: json:"user_list"
+  repeated user.User user_list = 3;
+}
+
+//  =========================好友列表============================
+enum MessageType {
+  // 关注
+  RECEIVE = 0;
+  // 取消关注
+  SEND = 1;
+}
+
+message RelationFriendListRequest{
+  // @gotags: json:"user_id"
+  uint64 user_id = 1;
+  // @gotags: json:"token_user_id"
+  uint64 token_user_id = 2;
+}
+
+message RelationFriendListResponse{
+  // @gotags: json:"status_code"
+  int32 status_code = 1;
+  // @gotags: json:"status_msg"
+  string status_msg = 2;
+  // @gotags: json:"user_list"
+  repeated FriendUser user_list = 3;
+}
+
+message FriendUser {
+  // @gotags: json:"message"
+  string message = 1;
+  // @gotags: json:"msg_type"
+  MessageType msg_type = 2;
+  // @gotags: json:"user_id"
+  uint64 user_id = 3;
+  // @gotags: json:"user_name"
+  string user_name = 4;
+  // @gotags: json:"follow_count"
+  int64 follow_count = 5;
+  // @gotags: json:"follower_count"
+  int64 follower_count = 6;
+  // @gotags: json:"is_follow"
+  bool is_follow = 7;
+  // @gotags: json:"total_favorite"
+  int64 total_favorite = 8;
+  // @gotags: json:"work_count"
+  int64 work_count = 9;
+  // @gotags: json:"favorite_count"
+  int64 favorite_count = 10;
+}
+
+service RelationService{
+  rpc RelationAction(RelationActionRequest) returns (RelationActionResponse){}
+  rpc RelationFollowList(RelationFollowListRequest) returns (RelationFollowListResponse){}
+  rpc RelationFollowerList(RelationFollowerListRequest) returns (RelationFollowerListResponse){}
+  rpc RelationFriendList(RelationFriendListRequest) returns (RelationFriendListResponse){}
+}
