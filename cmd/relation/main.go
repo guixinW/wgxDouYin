@@ -34,6 +34,7 @@ func errorHandler(err error, errMsg string) {
 func init() {
 	errMsg := "init failed"
 	privateKeyPath := fmt.Sprintf("keys/%v.pem", serviceName)
+	fmt.Println(privateKeyPath)
 	privateKey, err := keys.LoadPrivateKey(privateKeyPath)
 	errorHandler(err, errMsg)
 	err = service.Init(privateKey, serviceName)
@@ -43,12 +44,11 @@ func init() {
 func main() {
 	errMsg := "relation service failed"
 	r, err := etcd.NewServiceRegistry([]string{etcdAddr})
-	defer func(r *etcd.ServiceRegistry) {
-		err := r.Close()
-		errorHandler(err, errMsg)
-	}(r)
 	errorHandler(err, errMsg)
-
+	if r == nil {
+		logger.Fatalln("cant register service")
+		return
+	}
 	servicePublicKey, err := service.KeyManager.GetServerPublicKey(serviceName)
 	errorHandler(err, errMsg)
 	err = r.Register(serviceName, rpcAddr, servicePublicKey)

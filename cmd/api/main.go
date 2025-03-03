@@ -50,8 +50,8 @@ func InitRouter() *gin.Engine {
 		{
 			relation.POST("/action/", handler.RelationAction)
 			relation.POST("/friend/list/", handler.FriendList)
-			relation.POST("/follow/list", handler.FollowList)
-			relation.POST("/follower/list", handler.FollowerList)
+			relation.POST("/following/list/", handler.FollowingList)
+			relation.POST("/follower/list/", handler.FollowerList)
 		}
 	}
 	return router

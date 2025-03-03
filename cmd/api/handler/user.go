@@ -35,8 +35,13 @@ func UserRegister(c *gin.Context) {
 		Password: password,
 	}
 	res, err := rpc.Register(c, req)
-	if err != nil {
-		fmt.Printf("rpc register err:%v\n", err)
+	if res == nil {
+		c.JSON(http.StatusOK, response.Login{
+			Base: response.Base{
+				StatusCode: -1,
+				StatusMsg:  fmt.Sprintf("server request error:%v\n", err),
+			},
+		})
 		return
 	}
 	if res.StatusCode == -1 {

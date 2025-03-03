@@ -3,6 +3,7 @@ package wgxRedis
 import (
 	"context"
 	"fmt"
+	"github.com/go-co-op/gocron/v2"
 	"github.com/redis/go-redis/v9"
 	"testing"
 	"time"
@@ -64,4 +65,39 @@ func TestSentinelWrite(t *testing.T) {
 		t.Fatalf("Failed to set key: %v", err)
 	}
 	fmt.Println("Key set successfully")
+}
+
+func TestRelationMoveToDB(t *testing.T) {
+	err := RelationMoveToDB()
+	if err != nil {
+		t.Fatalf("RelationMoveToDB err: %v", err)
+	}
+}
+
+func TestGetSet(t *testing.T) {
+	key := fmt.Sprintf("following::%d", 1)
+	sets, err := getSet(context.Background(), key)
+	if err != nil {
+		t.Fatalf("getSet err: %v", err)
+	}
+	fmt.Println(sets)
+}
+
+func TestGocronToDB(t *testing.T) {
+	scheduler, err := gocron.NewScheduler()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	_, err = scheduler.NewJob(
+		gocron.DurationJob(time.Second),
+		gocron.NewTask(func() {
+			fmt.Println("test")
+		}))
+	scheduler.Start()
+	time.Sleep(3 * time.Second)
+	err = scheduler.Shutdown()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	time.Sleep(10 * time.Second)
 }

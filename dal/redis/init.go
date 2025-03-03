@@ -72,4 +72,5 @@ func init() {
 	rs := redsync.New(pool)
 	FavoriteMutex = rs.NewMutex("mutex-favorite")
 	RelationMutex = rs.NewMutex("mutex-relation")
+	go SyncRelationToDB()
 }

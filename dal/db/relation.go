@@ -21,9 +21,7 @@ func (FollowRelation) TableName() string {
 
 func GetRelationByUserIDs(ctx context.Context, userId uint64, toUserID uint64) (*FollowRelation, error) {
 	relation := new(FollowRelation)
-	if err := GetDB().Clauses(dbresolver.Read).WithContext(ctx).
-		Where("user_id=? and to_user_id=?", userId, toUserID).
-		First(&relation).Error; err == nil {
+	if err := GetDB().Clauses(dbresolver.Read).WithContext(ctx).Where("user_id=? and to_user_id=?", userId, toUserID).First(&relation).Error; err == nil {
 		return relation, nil
 	} else if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil

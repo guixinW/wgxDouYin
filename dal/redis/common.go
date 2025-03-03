@@ -2,7 +2,6 @@ package wgxRedis
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-redsync/redsync/v4"
 	"time"
 )
@@ -33,6 +32,58 @@ func deleteKey(ctx context.Context, key string, mutex *redsync.Mutex) error {
 	return nil
 }
 
+func getKeyValue(ctx context.Context, key string) (string, error) {
+	value, err := GetRedisHelper().Get(ctx, key).Result()
+	if err != nil {
+		return "", ErrorWrap(err, "getKey")
+	}
+	return value, nil
+}
+
+func getSet(ctx context.Context, key string) ([]string, error) {
+	results, err := GetRedisHelper().SMembers(ctx, key).Result()
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func getSetCount(ctx context.Context, key string) (int64, error) {
+	count, err := GetRedisHelper().SCard(ctx, key).Result()
+	if err != nil {
+		return -1, err
+	}
+	return count, nil
+}
+
+func addKeyToSet(ctx context.Context, key string, value []string, mutex *redsync.Mutex) error {
+	err := mutex.LockContext(ctx)
+	if err != nil {
+		return ErrorWrap(err, "add key")
+	}
+	err = GetRedisHelper().SAdd(ctx, key, value).Err()
+	if err != nil {
+		return err
+	}
+	_, err = mutex.UnlockContext(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func delKeyFormSet(ctx context.Context, key string, value []string, mutex *redsync.Mutex) error {
+	err := mutex.LockContext(ctx)
+	if err != nil {
+		return ErrorWrap(err, "delete key")
+	}
+	err = GetRedisHelper().SRem(ctx, key, value).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func setKey(ctx context.Context, key string, value string, expireTime time.Duration, mutex *redsync.Mutex) error {
 	err := mutex.LockContext(ctx)
 	if err != nil {
@@ -47,14 +98,4 @@ func setKey(ctx context.Context, key string, value string, expireTime time.Durat
 		return ErrorWrap(err, "setKey")
 	}
 	return nil
-}
-
-func GoCronRelation() {
-	ticker := time.NewTicker(syncTime * time.Second)
-	for {
-		select {
-		case <-ticker.C:
-			fmt.Println("test")
-		}
-	}
 }

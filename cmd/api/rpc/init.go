@@ -24,11 +24,11 @@ var (
 func init() {
 	var err error
 	KeysManager, err = keys.NewKeyManager(nil, "")
-	TikTokResolver = &etcd.TikTokServiceResolver{}
-	resolver.Register(TikTokResolver)
 	if err != nil {
 		logger.Errorln(errors.Wrap(err, "init error"))
 	}
+	TikTokResolver = &etcd.TikTokServiceResolver{}
+	resolver.Register(TikTokResolver)
 	userConfig := viper.Init("user")
 	relationConfig := viper.Init("relation")
 	InitUser(&userConfig)
@@ -41,8 +41,29 @@ func errorHandler(err error, msg string) {
 	}
 }
 
-// initClient 初始化各类微服务的rpc客户端
-func initClient(etcdAddress []string, serviceName string, client interface{}) {
+// initGrpcClient 初始化各类微服务的rpc客户端
+func initGrpcClient(etcdAddress []string, serviceName string, client interface{}) {
+	initDiscovery(etcdAddress, serviceName)
+	initClient(serviceName, client)
+}
+
+func initClient(serviceName string, client interface{}) {
+	conn, err := connectServer(serviceName)
+	if err != nil {
+		errorHandler(err, "connect server error")
+	}
+	switch c := client.(type) {
+	case *user.UserServiceClient:
+		*c = user.NewUserServiceClient(conn)
+	case *relation.RelationServiceClient:
+		*c = relation.NewRelationServiceClient(conn)
+	default:
+		panic("unsupported client type")
+	}
+}
+
+// 初始化etcd服务发现实例，并注册需要发现的服务名、密钥名
+func initDiscovery(etcdAddress []string, serviceName string) {
 	var err error
 	errMsg := "initClient failed"
 	if QueryTool == nil {
@@ -69,27 +90,18 @@ func initClient(etcdAddress []string, serviceName string, client interface{}) {
 			err := QueryTool.Watch(etcd.AddrPrefix(serviceName))
 			errorHandler(err, errMsg)
 		}()
-		QueryTool.SetQuerySourceAddress(etcdAddress)
-	}
-	fmt.Printf("serviceName:%v\n", serviceName)
-	conn, err := connectServer(serviceName)
-	errorHandler(err, errMsg)
-	switch c := client.(type) {
-	case *user.UserServiceClient:
-		*c = user.NewUserServiceClient(conn)
-	case *relation.RelationServiceClient:
-		*c = relation.NewRelationServiceClient(conn)
-	default:
-		panic("unsupported client type")
 	}
 }
 
 // connectServer 连接到serviceName指定的rpc服务端
 func connectServer(serviceName string) (conn *grpc.ClientConn, err error) {
+	addr := fmt.Sprintf("%s:///%s", "etcd", etcd.AddrPrefix(serviceName))
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	addr := fmt.Sprintf("%s:///%s", "etcd", etcd.AddrPrefix(serviceName))
 	conn, err = grpc.NewClient(addr, opts...)
+	if err != nil {
+		fmt.Printf("connect server error: %v\n", err)
+	}
 	return
 }
