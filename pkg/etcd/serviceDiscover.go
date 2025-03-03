@@ -1,27 +1,48 @@
 package etcd
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/resolver"
+	"sync"
 )
 
 var (
 	schema = "etcd"
 )
 
+type ServerToAddressMap struct {
+	data sync.Map
+}
+
+func (p *ServerToAddressMap) Store(key string, value resolver.Address) {
+	p.data.Store(key, value)
+}
+
+func (p *ServerToAddressMap) Load(key string) (resolver.Address, bool) {
+	value, ok := p.data.Load(key)
+	if !ok {
+		return resolver.Address{}, false
+	}
+	return value.(resolver.Address), true
+}
+
 type TikTokServiceResolver struct {
 	target  resolver.Target
 	cc      resolver.ClientConn
-	address map[string]resolver.Address
+	address ServerToAddressMap
 }
 
 func (r *TikTokServiceResolver) Update(key, value []byte) error {
-	if r.address == nil {
-		r.address = make(map[string]resolver.Address)
+	r.address.Store(string(key), resolver.Address{ServerName: string(key), Addr: string(value)})
+	r.address.data.Range(func(k, v interface{}) bool {
+		return true
+	})
+	if r.cc != nil {
+		err := r.update()
+		if err != nil {
+			return err
+		}
 	}
-	r.address[string(key)] = resolver.Address{ServerName: string(key), Addr: string(value)}
-	fmt.Println(r.address)
 	return nil
 }
 
@@ -39,15 +60,23 @@ func (r *TikTokServiceResolver) Scheme() string {
 	return schema
 }
 
-func (r *TikTokServiceResolver) ResolveNow(options resolver.ResolveNowOptions) {}
+func (r *TikTokServiceResolver) ResolveNow(options resolver.ResolveNowOptions) {
+	err := r.update()
+	if err != nil {
+		return
+	}
+}
 
 func (r *TikTokServiceResolver) Close() {}
 
 func (r *TikTokServiceResolver) update() error {
 	var updateAddress []resolver.Address
-	for _, value := range r.address {
-		updateAddress = append(updateAddress, value)
-	}
+	r.address.data.Range(func(k, v interface{}) bool {
+		if k.(string) == r.target.String()[8:] {
+			updateAddress = append(updateAddress, v.(resolver.Address))
+		}
+		return true
+	})
 	err := r.cc.UpdateState(resolver.State{Addresses: updateAddress})
 	if err != nil {
 		return errors.Wrap(err, "TikTokServiceResolver update failed")

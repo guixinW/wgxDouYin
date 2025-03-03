@@ -13,7 +13,7 @@ import (
 
 var (
 	ttlKey     = ""
-	defaultTTL = 60
+	defaultTTL = 5
 	ctxTimeout = 3
 )
 
@@ -64,6 +64,7 @@ func (e *ServiceRegistry) Register(serviceName, serviceAddr string, servicePubli
 			return err
 		}
 	}
+
 	//将service的公钥存入etcd
 	if servicePublicKey.Curve != nil {
 		servicePublicKeyString, err := keys.PublicKeyToPEM(servicePublicKey)
@@ -104,17 +105,21 @@ func (e *ServiceRegistry) keepAlive() error {
 	if err != nil {
 		return err
 	}
-	go func(keepAliveChan <-chan *clientv3.LeaseKeepAliveResponse) {
+	go func() {
 		logger.Infof("start keepalive lease %x for etcd register", e.meta.leaseID)
-		for range keepAliveChan {
+		for {
 			select {
 			case <-e.meta.ctx.Done():
-				break
-			default:
+				logger.Infof("context canceled, stopping keepalive lease %x", e.meta.leaseID)
+				return
+			case _, ok := <-keepAliveChan:
+				if !ok {
+					logger.Infof("keepAliveChan closed, stopping keepalive lease %x", e.meta.leaseID)
+					return
+				}
 			}
 		}
-		logger.Infof("stop keepalive lease %x for etcd register", e.meta.leaseID)
-	}(keepAliveChan)
+	}()
 	return nil
 }
 

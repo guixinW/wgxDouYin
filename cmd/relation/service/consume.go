@@ -37,6 +37,3 @@ func consume() error {
 	}
 	return nil
 }
-
-func GoCron() {
-}

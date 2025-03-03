@@ -14,6 +14,7 @@ import (
 func TokenAuthMiddleware(serviceDependencyMap map[string]string, keys *keys.KeyManager, skipRoutes ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		serviceName, err := getServiceName(c.FullPath())
+		fmt.Println(serviceName)
 		if err != nil {
 			responseWithError(c, http.StatusUnauthorized, err)
 		}
@@ -49,7 +50,7 @@ func TokenAuthMiddleware(serviceDependencyMap map[string]string, keys *keys.KeyM
 			responseWithError(c, http.StatusUnauthorized, err.Error())
 			return
 		}
-		c.Set("UserID", claim.UserId)
+		c.Set("token_user_id", claim.UserId)
 		c.Next()
 	}
 }
