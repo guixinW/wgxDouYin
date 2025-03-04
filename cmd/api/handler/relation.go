@@ -54,6 +54,36 @@ func RelationAction(c *gin.Context) {
 }
 
 func FriendList(c *gin.Context) {
+	userId, err := strconv.ParseUint(c.PostForm("user_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(err.Error()))
+		return
+	}
+	tokenUserId, exist := c.Get("token_user_id")
+	if !exist {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Errorf("请求不合法").Error()))
+		return
+	}
+	req := &relationGrpc.RelationFriendListRequest{
+		TokenUserId: tokenUserId.(uint64),
+		UserId:      userId,
+	}
+	res, err := rpc.RelationFriendList(c, req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(err.Error()))
+		return
+	}
+	if res.StatusCode == -1 {
+		c.JSON(http.StatusOK, response.ErrorResponse(res.StatusMsg))
+		return
+	}
+	c.JSON(http.StatusOK, response.FriendList{
+		Base: response.Base{
+			StatusCode: 0,
+			StatusMsg:  res.StatusMsg,
+		},
+		FriendList: res.UserList,
+	})
 }
 
 func FollowingList(c *gin.Context) {
@@ -90,5 +120,34 @@ func FollowingList(c *gin.Context) {
 }
 
 func FollowerList(c *gin.Context) {
-
+	userId, err := strconv.ParseUint(c.PostForm("user_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(err.Error()))
+		return
+	}
+	tokenUserId, exist := c.Get("token_user_id")
+	if !exist {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Errorf("请求不合法").Error()))
+		return
+	}
+	req := &relationGrpc.RelationFollowerListRequest{
+		TokenUserId: tokenUserId.(uint64),
+		UserId:      userId,
+	}
+	res, err := rpc.RelationFollowerList(c, req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(err.Error()))
+		return
+	}
+	if res.StatusCode == -1 {
+		c.JSON(http.StatusOK, response.ErrorResponse(res.StatusMsg))
+		return
+	}
+	c.JSON(http.StatusOK, response.FollowerList{
+		Base: response.Base{
+			StatusCode: 0,
+			StatusMsg:  res.StatusMsg,
+		},
+		UserList: res.UserList,
+	})
 }

@@ -100,7 +100,6 @@ func (s *RelationServiceImpl) RelationFollowList(ctx context.Context, req *relat
 		}
 		return res, nil
 	}
-	fmt.Printf("user id:%v\n", req.UserId)
 	userIds, err := wgxRedis.GetFollowingIDs(ctx, req.UserId)
 	if err != nil {
 		logger.Errorf("用户%v获取关注者列表失败", req.UserId)
@@ -110,7 +109,6 @@ func (s *RelationServiceImpl) RelationFollowList(ctx context.Context, req *relat
 		}
 		return res, nil
 	}
-	fmt.Println(userIds)
 	userList := make([]*user.User, 0, len(userIds))
 	for _, userId := range userIds {
 		userFollowerCount, followerErr := wgxRedis.GetFollowerCount(ctx, userId)
@@ -137,11 +135,92 @@ func (s *RelationServiceImpl) RelationFollowList(ctx context.Context, req *relat
 }
 
 // RelationFollowerList 获取用户的粉丝列表
-func (s *RelationServiceImpl) RelationFollowerList(context.Context, *relation.RelationFollowerListRequest) (*relation.RelationFollowerListResponse, error) {
-	return nil, nil
+func (s *RelationServiceImpl) RelationFollowerList(ctx context.Context, req *relation.RelationFollowerListRequest) (*relation.RelationFollowerListResponse, error) {
+	if req.TokenUserId != req.UserId {
+		logger.Errorf("操作非法：用户%v尝试获取用户%v的粉丝列表", req.TokenUserId, req.UserId)
+		res := &relation.RelationFollowerListResponse{
+			StatusCode: -1,
+			StatusMsg:  "操作非法：你无法获取其他用户的粉丝列表",
+		}
+		return res, nil
+	}
+	userIds, err := wgxRedis.GetFollowerIDs(ctx, req.UserId)
+	if err != nil {
+		logger.Errorf("用户%v获取关注者列表失败", req.UserId)
+		res := &relation.RelationFollowerListResponse{
+			StatusCode: -1,
+			StatusMsg:  "获取列表失败",
+		}
+		return res, nil
+	}
+	userList := make([]*user.User, 0, len(userIds))
+	for _, userId := range userIds {
+		userFollowerCount, followerErr := wgxRedis.GetFollowerCount(ctx, userId)
+		userFollowingCount, followingErr := wgxRedis.GetFollowingCount(ctx, userId)
+		if followingErr != nil || followerErr != nil {
+			res := &relation.RelationFollowerListResponse{
+				StatusCode: -1,
+				StatusMsg:  "获取用户详细信息失败",
+			}
+			return res, nil
+		}
+		userList = append(userList, &user.User{
+			Id:             userId,
+			FollowingCount: userFollowingCount,
+			FollowerCount:  userFollowerCount,
+		})
+	}
+	res := &relation.RelationFollowerListResponse{
+		StatusCode: 0,
+		StatusMsg:  "success",
+		UserList:   userList,
+	}
+	return res, nil
 }
 
 // RelationFriendList 获取用户的好友
-func (s *RelationServiceImpl) RelationFriendList(context.Context, *relation.RelationFriendListRequest) (*relation.RelationFriendListResponse, error) {
-	return nil, nil
+func (s *RelationServiceImpl) RelationFriendList(ctx context.Context, req *relation.RelationFriendListRequest) (*relation.RelationFriendListResponse, error) {
+	if req.TokenUserId != req.UserId {
+		logger.Errorf("操作非法：用户%v尝试获取用户%v的好友列表", req.TokenUserId, req.UserId)
+		res := &relation.RelationFriendListResponse{
+			StatusCode: -1,
+			StatusMsg:  "操作非法：你无法获取其他用户的粉丝列表",
+		}
+		return res, nil
+	}
+	friendIds, err := wgxRedis.GetFriends(ctx, req.UserId)
+	if err != nil {
+		logger.Errorf("用户%v获取关注者列表失败", req.UserId)
+		res := &relation.RelationFriendListResponse{
+			StatusCode: -1,
+			StatusMsg:  "获取列表失败",
+		}
+		return res, nil
+	}
+	fmt.Println(friendIds)
+	friendList := make([]*relation.FriendUser, 0, len(friendIds))
+	for _, friendId := range friendIds {
+		friendFollowerCount, followerErr := wgxRedis.GetFollowerCount(ctx, friendId)
+		friendFollowingCount, followingErr := wgxRedis.GetFollowingCount(ctx, friendId)
+		if followingErr != nil || followerErr != nil {
+			res := &relation.RelationFriendListResponse{
+				StatusCode: -1,
+				StatusMsg:  "获取用户详细信息失败",
+			}
+			return res, nil
+		}
+		fmt.Println(friendId, friendFollowerCount, friendFollowerCount)
+		friendList = append(friendList, &relation.FriendUser{
+			UserId:        friendId,
+			IsFollow:      true,
+			FollowCount:   friendFollowingCount,
+			FollowerCount: friendFollowerCount,
+		})
+	}
+	res := &relation.RelationFriendListResponse{
+		StatusCode: 0,
+		StatusMsg:  "success",
+		UserList:   friendList,
+	}
+	return res, nil
 }

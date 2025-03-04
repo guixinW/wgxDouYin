@@ -68,10 +68,14 @@ enum MessageType {
 }
 
 message RelationFriendListRequest{
+  // @gotags: json:"status_code"
+  int32 status_code = 1;
+  // @gotags: json:"status_msg"
+  string status_msg = 2;
   // @gotags: json:"user_id"
-  uint64 user_id = 1;
+  uint64 user_id = 3;
   // @gotags: json:"token_user_id"
-  uint64 token_user_id = 2;
+  uint64 token_user_id = 4;
 }
 
 message RelationFriendListResponse{
@@ -93,17 +97,17 @@ message FriendUser {
   // @gotags: json:"user_name"
   string user_name = 4;
   // @gotags: json:"follow_count"
-  int64 follow_count = 5;
+  uint64 follow_count = 5;
   // @gotags: json:"follower_count"
-  int64 follower_count = 6;
+  uint64 follower_count = 6;
   // @gotags: json:"is_follow"
   bool is_follow = 7;
   // @gotags: json:"total_favorite"
-  int64 total_favorite = 8;
+  uint64 total_favorite = 8;
   // @gotags: json:"work_count"
-  int64 work_count = 9;
+  uint64 work_count = 9;
   // @gotags: json:"favorite_count"
-  int64 favorite_count = 10;
+  uint64 favorite_count = 10;
 }
 
 service RelationService{

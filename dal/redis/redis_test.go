@@ -3,7 +3,6 @@ package wgxRedis
 import (
 	"context"
 	"fmt"
-	"github.com/go-co-op/gocron/v2"
 	"github.com/redis/go-redis/v9"
 	"testing"
 	"time"
@@ -83,21 +82,22 @@ func TestGetSet(t *testing.T) {
 	fmt.Println(sets)
 }
 
-func TestGocronToDB(t *testing.T) {
-	scheduler, err := gocron.NewScheduler()
+func TestSetCount(t *testing.T) {
+	key := fmt.Sprintf("follower::3")
+	count, err := getSetCount(context.Background(), key)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("getSet err: %v", err)
 	}
-	_, err = scheduler.NewJob(
-		gocron.DurationJob(time.Second),
-		gocron.NewTask(func() {
-			fmt.Println("test")
-		}))
-	scheduler.Start()
-	time.Sleep(3 * time.Second)
-	err = scheduler.Shutdown()
+	fmt.Println(count)
+}
+
+func TestIntersection(t *testing.T) {
+	followingKey := fmt.Sprintf("following::%d", 1)
+	followerKey := fmt.Sprintf("follower::%d", 1)
+	res, err := getSetIntersection(context.Background(), followingKey, followerKey)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf(err.Error())
 	}
-	time.Sleep(10 * time.Second)
+	fmt.Println(res)
+	time.Sleep(2 * time.Second)
 }

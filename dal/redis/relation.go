@@ -103,14 +103,14 @@ func GetFollowerIDs(ctx context.Context, userID uint64) ([]uint64, error) {
 	return followers, nil
 }
 
-// GetFollowerIDs 根据userID获取其粉丝数量
+// GetFollowerCount 根据userID获取其粉丝数量
 func GetFollowerCount(ctx context.Context, userID uint64) (uint64, error) {
 	key := fmt.Sprintf("follower::%d", userID)
-	follower := 0
-	if follower, err := getSetCount(ctx, key); follower < 0 || err != nil {
-		return 0, ErrorWrap(err, "get follower count error")
+	count, err := getSetCount(ctx, key)
+	if err != nil {
+		return 0, errors.Wrap(err, "GetFollowerCount error")
 	}
-	return uint64(follower), nil
+	return count, nil
 }
 
 // GetFollowingIDs 根据userID获取关注者ID列表
@@ -131,11 +131,31 @@ func GetFollowingIDs(ctx context.Context, userID uint64) ([]uint64, error) {
 	return following, nil
 }
 
+// GetFollowingCount 根据userID获取关注者数量
 func GetFollowingCount(ctx context.Context, userID uint64) (uint64, error) {
 	key := fmt.Sprintf("following::%d", userID)
-	follower := 0
-	if follower, err := getSetCount(ctx, key); follower < 0 || err != nil {
+	count, err := getSetCount(ctx, key)
+	if err != nil {
 		return 0, ErrorWrap(err, "get following count error")
 	}
-	return uint64(follower), nil
+	return count, nil
+}
+
+// GetFriends 获取好友id
+func GetFriends(ctx context.Context, userID uint64) ([]uint64, error) {
+	followingKey := fmt.Sprintf("following::%d", userID)
+	followerKey := fmt.Sprintf("follower::%d", userID)
+	result, err := getSetIntersection(ctx, followingKey, followerKey)
+	if err != nil {
+		return nil, err
+	}
+	friendIdsInt := make([]uint64, 0, len(result))
+	for _, friendIdStr := range result {
+		friendId, err := strconv.ParseUint(friendIdStr, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		friendIdsInt = append(friendIdsInt, friendId)
+	}
+	return friendIdsInt, nil
 }

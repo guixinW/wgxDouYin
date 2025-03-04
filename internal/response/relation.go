@@ -1,6 +1,7 @@
 package response
 
 import user "wgxDouYin/grpc/user"
+import relation "wgxDouYin/grpc/relation"
 
 type RelationAction struct {
 	Base
@@ -18,5 +19,5 @@ type FollowList struct {
 
 type FriendList struct {
 	Base
-	UserList []*user.User `json:"user_list"`
+	FriendList []*relation.FriendUser `json:"friend_list"`
 }

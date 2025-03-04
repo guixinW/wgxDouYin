@@ -48,12 +48,20 @@ func getSet(ctx context.Context, key string) ([]string, error) {
 	return results, nil
 }
 
-func getSetCount(ctx context.Context, key string) (int64, error) {
+func getSetCount(ctx context.Context, key string) (uint64, error) {
 	count, err := GetRedisHelper().SCard(ctx, key).Result()
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
-	return count, nil
+	return uint64(count), nil
+}
+
+func getSetIntersection(ctx context.Context, key ...string) ([]string, error) {
+	result, err := GetRedisHelper().SInter(ctx, key...).Result()
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func addKeyToSet(ctx context.Context, key string, value []string, mutex *redsync.Mutex) error {
