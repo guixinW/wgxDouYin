@@ -86,8 +86,8 @@ func UserInform(c *gin.Context) {
 	}
 	id := userId.(uint64)
 	req := &userGrpc.UserInfoRequest{
-		UserId: id,
-		Token:  "",
+		UserId:      id,
+		TokenUserId: id,
 	}
 	res, _ := rpc.UserInform(c, req)
 	if res.StatusCode == -1 {

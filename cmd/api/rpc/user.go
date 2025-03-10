@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"wgxDouYin/grpc/user"
-	grpc "wgxDouYin/grpc/user"
 	"wgxDouYin/pkg/viper"
 )
 
 var (
-	userClient grpc.UserServiceClient
+	userClient user.UserServiceClient
 )
 
 func InitUser(config *viper.Config) {

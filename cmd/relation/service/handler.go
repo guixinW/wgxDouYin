@@ -211,10 +211,12 @@ func (s *RelationServiceImpl) RelationFriendList(ctx context.Context, req *relat
 		}
 		fmt.Println(friendId, friendFollowerCount, friendFollowerCount)
 		friendList = append(friendList, &relation.FriendUser{
-			UserId:        friendId,
-			IsFollow:      true,
-			FollowCount:   friendFollowingCount,
-			FollowerCount: friendFollowerCount,
+			User: &user.User{
+				Id:             friendId,
+				IsFollow:       true,
+				FollowerCount:  friendFollowerCount,
+				FollowingCount: friendFollowingCount,
+			},
 		})
 	}
 	res := &relation.RelationFriendListResponse{

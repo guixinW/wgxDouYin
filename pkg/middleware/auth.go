@@ -14,7 +14,6 @@ import (
 func TokenAuthMiddleware(serviceDependencyMap map[string]string, keys *keys.KeyManager, skipRoutes ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		serviceName, err := getServiceName(c.FullPath())
-		fmt.Println(serviceName)
 		if err != nil {
 			responseWithError(c, http.StatusUnauthorized, err)
 		}

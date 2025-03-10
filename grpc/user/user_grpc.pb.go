@@ -71,7 +71,7 @@ func (c *userServiceClient) UserInfo(ctx context.Context, in *UserInfoRequest, o
 	return out, nil
 }
 
-// UserServiceServer is the service API for UserService service.
+// UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
 type UserServiceServer interface {

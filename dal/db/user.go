@@ -14,14 +14,15 @@ type User struct {
 	FavoriteVideos []Video `gorm:"many2many:user_favorite_videos" json:"favorite_videos,omitempty"`
 	FollowingCount uint64  `gorm:"default:0;not null" json:"follow_count,omitempty"`
 	FollowerCount  uint64  `gorm:"default:0;not null" json:"follower_count,omitempty"`
+	WorkCount      uint64  `gorm:"default:0;not null" json:"work_count,omitempty"`
+	FavoriteCount  uint64  `gorm:"default:0;not null" json:"favorite_count,omitempty"`
 }
 
 func (User) TableName() string {
 	return "users"
 }
 
-// GetUserByID
-// 根据用户id获取用户
+// GetUserByID 根据用户id获取用户
 func GetUserByID(ctx context.Context, userID uint64) (*User, error) {
 	res := new(User)
 	if err := GetDB().Clauses(dbresolver.Read).WithContext(ctx).First(&res, userID).Error; err == nil {
@@ -33,8 +34,7 @@ func GetUserByID(ctx context.Context, userID uint64) (*User, error) {
 	}
 }
 
-// GetUserByIDs
-// 根据用户id列表获取用户列表
+// GetUserByIDs 根据用户id列表获取用户列表
 func GetUserByIDs(ctx context.Context, userIDs []uint64) ([]*User, error) {
 	res := make([]*User, 0)
 	if len(userIDs) == 0 {
@@ -46,8 +46,7 @@ func GetUserByIDs(ctx context.Context, userIDs []uint64) ([]*User, error) {
 	return res, nil
 }
 
-// GetUserByName
-// 根据用户名获取用户信息
+// GetUserByName 根据用户名获取用户信息
 func GetUserByName(ctx context.Context, userName string) (*User, error) {
 	res := new(User)
 	if err := GetDB().Clauses(dbresolver.Read).WithContext(ctx).Select("id, user_name, password").Where("user_name = ?", userName).First(&res).Error; err == nil {
@@ -59,8 +58,7 @@ func GetUserByName(ctx context.Context, userName string) (*User, error) {
 	}
 }
 
-// CreateUser
-// 创建用户
+// CreateUser 创建用户
 func CreateUser(ctx context.Context, user *User) error {
 	err := GetDB().Clauses(dbresolver.Write).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(user).Error; err != nil {
@@ -71,6 +69,7 @@ func CreateUser(ctx context.Context, user *User) error {
 	return err
 }
 
+// GetPasswordByUsername 根据用户名获取用户密码
 func GetPasswordByUsername(ctx context.Context, userName string) (*User, error) {
 	user := new(User)
 	if err := GetDB().Clauses(dbresolver.Read).WithContext(ctx).

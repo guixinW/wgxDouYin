@@ -7,6 +7,7 @@ import (
 	"io"
 	"runtime/debug"
 	"testing"
+	"time"
 )
 
 func ExpectEqual(left interface{}, right interface{}, t *testing.T) {
@@ -34,11 +35,9 @@ func UploadFileByPath(bucketName, objectName, path, contentType string) (int64, 
 	if len(bucketName) <= 0 || len(objectName) <= 0 || len(path) <= 0 {
 		return -1, errors.New("invalid argument")
 	}
-
 	uploadInfo, err := minioClient.FPutObject(context.Background(), bucketName, objectName, path, minio.PutObjectOptions{
 		ContentType: contentType,
 	})
-
 	if err != nil {
 		return -1, err
 	}
@@ -57,4 +56,17 @@ func UploadFileByIO(bucketName, objectName string, reader io.Reader, size int64,
 		return -1, err
 	}
 	return uploadInfo.Size, nil
+}
+
+func GetFileTemporaryURL(bucketName, objectName string) (string, error) {
+	if len(bucketName) <= 0 || len(objectName) <= 0 {
+		return "", errors.New("invalid argument")
+	}
+	expiry := time.Second * time.Duration(20)
+	PresignedURL, err := minioClient.PresignedGetObject(context.Background(), bucketName, objectName, expiry, nil)
+	if err != nil {
+		return "", err
+	}
+	return PresignedURL.String(), nil
+
 }

@@ -49,13 +49,22 @@ message User {
   uint64 following_count = 3;
   // @gotags: json:"follower_count"
   uint64 follower_count = 4;
-
+  // @gotags: json:"is_follow"
+  bool is_follow = 5;
+  // @gotags: json:"total_favorite"
+  uint64 total_favorite = 6;
+  // @gotags: json:"work_count"
+  uint64 work_count = 7;
+  // @gotags: json:"favorite_count"
+  uint64 favorite_count = 8;
 }
+
+
 message UserInfoRequest {
   // @gotags: json:"user_id" form:"user_id" validate:"required" binding:"required"
   uint64 user_id = 1;
-  // @gotags: json:"token" form:"token" binding:"required"
-  string token = 2;
+  // @gotags: json:"token_user_id" form:"token" binding:"required"
+  uint64 token_user_id = 2;
 }
 message UserInfoResponse {
   // @gotags: json:"status_code"

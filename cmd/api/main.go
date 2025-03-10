@@ -7,7 +7,6 @@ import (
 	"wgxDouYin/cmd/api/rpc"
 	"wgxDouYin/pkg/middleware"
 	"wgxDouYin/pkg/viper"
-	"wgxDouYin/pkg/zap"
 )
 
 var (
@@ -19,7 +18,7 @@ var (
 	}
 	ServiceNameMap       map[string]string
 	ServiceDependencyMap map[string]string
-	logger               = zap.InitLogger()
+	//logger               = zap.InitLogger()
 )
 
 func init() {
@@ -52,6 +51,17 @@ func InitRouter() *gin.Engine {
 			relation.POST("/friend/list/", handler.FriendList)
 			relation.POST("/following/list/", handler.FollowingList)
 			relation.POST("/follower/list/", handler.FollowerList)
+		}
+		publish := wgxDouYin.Group("/video")
+		{
+			publish.GET("/feed/", handler.Feed)
+			publish.GET("/list/", handler.PublishList)
+			publish.POST("/action/", handler.PublishAction)
+		}
+		favorite := wgxDouYin.Group("/favorite")
+		{
+			favorite.POST("/action/", handler.FavoriteAction)
+			favorite.POST("/list/", handler.FavoriteList)
 		}
 	}
 	return router

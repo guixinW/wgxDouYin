@@ -4,7 +4,7 @@ package relation;
 import "user.proto";
 
 //  =========================关注以及取消关注============================
-enum ActionType {
+enum RelationActionType {
   // 关注
   FOLLOW = 0;
   // 取消关注
@@ -15,7 +15,7 @@ message RelationActionRequest {
   // @gotags: json:"to_user_id"
   uint64 to_user_id = 1;
   // @gotags: json:"action_type"
-  ActionType action_type = 2;
+  RelationActionType action_type = 2;
   // @gotags: json:"token_user_id"
   uint64 token_user_id = 3;
 }
@@ -92,22 +92,8 @@ message FriendUser {
   string message = 1;
   // @gotags: json:"msg_type"
   MessageType msg_type = 2;
-  // @gotags: json:"user_id"
-  uint64 user_id = 3;
-  // @gotags: json:"user_name"
-  string user_name = 4;
-  // @gotags: json:"follow_count"
-  uint64 follow_count = 5;
-  // @gotags: json:"follower_count"
-  uint64 follower_count = 6;
-  // @gotags: json:"is_follow"
-  bool is_follow = 7;
-  // @gotags: json:"total_favorite"
-  uint64 total_favorite = 8;
-  // @gotags: json:"work_count"
-  uint64 work_count = 9;
-  // @gotags: json:"favorite_count"
-  uint64 favorite_count = 10;
+  // @gotags: json:"user"
+  user.User user = 3;
 }
 
 service RelationService{

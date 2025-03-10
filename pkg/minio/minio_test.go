@@ -3,7 +3,9 @@ package minio
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/minio/minio-go/v7"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -13,10 +15,54 @@ import (
 	"time"
 )
 
-func TestUploadFileByIO(t *testing.T) {
+func TestRemoveBucket(t *testing.T) {
 	tmpBucketName := "dc4a65747c0646c4a6eed59fb5404617"
-	tmpObjectName := "aasdjals923ijnsjnfao3i"
-	tmpFilePath := "fileexist.mp4"
+	ctx := context.Background()
+	exist, errEx := minioClient.BucketExists(ctx, tmpBucketName)
+	if errEx != nil {
+		t.Fatalf(errEx.Error())
+	}
+	if !exist {
+		t.Fatalf("bucket is not exist")
+	}
+	err := minioClient.RemoveBucket(ctx, tmpBucketName)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+}
+
+func TestRemoveBucketsObject(t *testing.T) {
+	tmpBucketName := "dc4a65747c0646c4a6eed59fb5404617"
+	ctx := context.Background()
+	exist, errEx := minioClient.BucketExists(context.Background(), tmpBucketName)
+	if errEx != nil {
+		t.Fatalf(errEx.Error())
+	}
+	if !exist {
+		t.Fatalf("bucket is not exist")
+	}
+	objectCh := minioClient.ListObjects(ctx, tmpBucketName, minio.ListObjectsOptions{Recursive: true})
+	removeObjects := make([]minio.ObjectInfo, 0)
+	for object := range objectCh {
+		removeObjects = append(removeObjects, minio.ObjectInfo{Key: object.Key})
+	}
+	deleteChan := make(chan minio.ObjectInfo)
+	go func(rmObj []minio.ObjectInfo) {
+		for _, obj := range rmObj {
+			deleteChan <- obj
+		}
+		close(deleteChan)
+	}(removeObjects)
+	errorCh := minioClient.RemoveObjects(ctx, tmpBucketName, deleteChan, minio.RemoveObjectsOptions{})
+	for e := range errorCh {
+		t.Fatalf("删除失败：%v", e)
+	}
+}
+
+func TestUploadFileByIO(t *testing.T) {
+	tmpBucketName := "test"
+	tmpObjectName := "testObject"
+	tmpFilePath := "test.mp4"
 	contentType := "application/mp4"
 	ctx := context.Background()
 	exist, errEx := minioClient.BucketExists(ctx, tmpBucketName)
@@ -38,10 +84,6 @@ func TestUploadFileByIO(t *testing.T) {
 		size, err := UploadFileByIO(tmpBucketName, tmpObjectName, fp, file.Size, contentType)
 		ExpectEqual(size, file.Size, t)
 		ExpectEqual(err, nil, t)
-		err = minioClient.RemoveBucket(ctx, tmpBucketName)
-		if err != nil {
-			t.Error(err)
-		}
 	})
 	go func() {
 		err := r.Run("127.0.0.1:4001")
@@ -49,7 +91,6 @@ func TestUploadFileByIO(t *testing.T) {
 			t.Error(err.Error())
 		}
 	}()
-
 	time.Sleep(5 * time.Second)
 	file, err := os.Open(tmpFilePath)
 	ExpectEqual(err, nil, t)
@@ -74,4 +115,14 @@ func TestUploadFileByIO(t *testing.T) {
 	client := &http.Client{}
 	_, err = client.Do(req)
 	ExpectEqual(err, nil, t)
+}
+
+func TestGetFileTemporaryURL(t *testing.T) {
+	bucketName := "test"
+	objectName := "testObject"
+	url, err := GetFileTemporaryURL(bucketName, objectName)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	fmt.Println(url)
 }

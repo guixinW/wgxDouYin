@@ -16,12 +16,12 @@ func RelationAction(c *gin.Context) {
 		c.JSON(http.StatusOK, response.ErrorResponse(err.Error()))
 		return
 	}
-	var actionType relationGrpc.ActionType
+	var actionType relationGrpc.RelationActionType
 	postActionType := c.PostForm("action_type")
 	if postActionType == "0" {
-		actionType = relationGrpc.ActionType_FOLLOW
+		actionType = relationGrpc.RelationActionType_FOLLOW
 	} else if postActionType == "1" {
-		actionType = relationGrpc.ActionType_UN_FOLLOW
+		actionType = relationGrpc.RelationActionType_UN_FOLLOW
 	} else {
 		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Errorf("action_type不合法").Error()))
 		return

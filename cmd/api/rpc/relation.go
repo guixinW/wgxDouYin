@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"wgxDouYin/grpc/relation"
-	grpc "wgxDouYin/grpc/relation"
 	"wgxDouYin/pkg/viper"
 )
 
 var (
-	relationClient grpc.RelationServiceClient
+	relationClient relation.RelationServiceClient
 )
 
 func InitRelation(config *viper.Config) {

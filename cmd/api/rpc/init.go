@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/resolver"
 	"wgxDouYin/grpc/relation"
 	"wgxDouYin/grpc/user"
+	"wgxDouYin/grpc/video"
 	"wgxDouYin/pkg/etcd"
 	"wgxDouYin/pkg/keys"
 	"wgxDouYin/pkg/viper"
@@ -31,8 +32,10 @@ func init() {
 	resolver.Register(TikTokResolver)
 	userConfig := viper.Init("user")
 	relationConfig := viper.Init("relation")
+	videoConfig := viper.Init("video")
 	InitUser(&userConfig)
 	InitRelation(&relationConfig)
+	InitVideo(&videoConfig)
 }
 
 func errorHandler(err error, msg string) {
@@ -57,6 +60,8 @@ func initClient(serviceName string, client interface{}) {
 		*c = user.NewUserServiceClient(conn)
 	case *relation.RelationServiceClient:
 		*c = relation.NewRelationServiceClient(conn)
+	case *video.VideoServiceClient:
+		*c = video.NewVideoServiceClient(conn)
 	default:
 		panic("unsupported client type")
 	}
