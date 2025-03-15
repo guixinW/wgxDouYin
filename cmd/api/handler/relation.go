@@ -17,7 +17,7 @@ func RelationAction(c *gin.Context) {
 		return
 	}
 	var actionType relationGrpc.RelationActionType
-	postActionType := c.PostForm("action_type")
+	postActionType := c.PostForm("relation_action_type")
 	if postActionType == "0" {
 		actionType = relationGrpc.RelationActionType_FOLLOW
 	} else if postActionType == "1" {

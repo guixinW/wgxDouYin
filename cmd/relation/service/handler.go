@@ -38,10 +38,10 @@ func (s *RelationServiceImpl) RelationAction(ctx context.Context, req *relation.
 		return res, nil
 	}
 	relationCache := &wgxRedis.RelationCache{
-		UserID:     uint(req.TokenUserId),
-		ToUserID:   uint(req.ToUserId),
-		ActionType: uint(req.ActionType),
-		CreatedAt:  uint(time.Now().UnixMilli()),
+		UserID:     req.TokenUserId,
+		ToUserID:   req.ToUserId,
+		ActionType: req.ActionType,
+		CreatedAt:  uint64(time.Now().UnixMilli()),
 	}
 	jsonRc, err := json.Marshal(relationCache)
 	if err != nil {

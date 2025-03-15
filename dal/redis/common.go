@@ -107,3 +107,8 @@ func setKey(ctx context.Context, key string, value string, expireTime time.Durat
 	}
 	return nil
 }
+
+func isKeyExist(ctx context.Context, key string) (bool, error) {
+	keyExisted, err := GetRedisHelper().Exists(ctx, key).Result()
+	return keyExisted == 1, err
+}

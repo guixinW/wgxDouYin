@@ -16,7 +16,7 @@ const ExpireTime = 5 * time.Second
 
 var (
 	config        = viper.Init("db")
-	zapLogger     = zap.InitLogger()
+	logger        = zap.InitLogger()
 	redisOnce     sync.Once
 	redisHelper   *RedisHelper
 	FavoriteMutex *redsync.Mutex
@@ -65,7 +65,7 @@ func init() {
 	cluster := CreateFailoverClusterClient([]string{"sentinel1", "sentinel2", "sentinel3"})
 	InitRedisHelper(cluster)
 	if _, err := GetRedisHelper().Ping(ctx).Result(); err != nil {
-		zapLogger.Errorln(err.Error())
+		logger.Errorln(err.Error())
 		return
 	}
 	pool := goredis.NewPool(cluster)
@@ -73,4 +73,5 @@ func init() {
 	FavoriteMutex = rs.NewMutex("mutex-favorite")
 	RelationMutex = rs.NewMutex("mutex-relation")
 	go SyncRelationToDB()
+	go SyncFavoriteToDB()
 }

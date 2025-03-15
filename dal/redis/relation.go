@@ -6,42 +6,50 @@ import (
 	"github.com/pkg/errors"
 	"strconv"
 	"strings"
+	"wgxDouYin/grpc/relation"
 )
 
+func StrToRelationActionType(str string) relation.RelationActionType {
+	if str == "0" {
+		return relation.RelationActionType_FOLLOW
+	} else if str == "1" {
+		return relation.RelationActionType_UN_FOLLOW
+	} else {
+		return relation.RelationActionType_WRONG_TYPE
+	}
+}
+
 type RelationCache struct {
-	UserID     uint `json:"user_id" redis:"user_id"`
-	ToUserID   uint `json:"to_user_id" redis:"to_user_id"`
-	ActionType uint `json:"action_type" redis:"action_type"`
-	CreatedAt  uint `json:"created_at" redis:"created_at"`
+	UserID     uint64                      `json:"user_id" redis:"user_id"`
+	ToUserID   uint64                      `json:"to_user_id" redis:"to_user_id"`
+	CreatedAt  uint64                      `json:"created_at" redis:"created_at"`
+	ActionType relation.RelationActionType `json:"action_type" redis:"action_type"`
 }
 
 func ErrorWrap(err error, warpMessage string) error {
 	return errors.Wrap(err, warpMessage)
 }
 
-func UpdateRelation(ctx context.Context, relation *RelationCache) error {
-	keyRelation := fmt.Sprintf("user::%d::to_user::%d", relation.UserID, relation.ToUserID)
-	valueRelation := fmt.Sprintf("%d::%d", relation.CreatedAt, relation.ActionType)
-	follower := fmt.Sprintf("follower::%d", relation.ToUserID)
-	following := fmt.Sprintf("following::%d", relation.UserID)
-	keyExisted, err := GetRedisHelper().Exists(ctx, keyRelation).Result()
+func UpdateRelation(ctx context.Context, relationCache *RelationCache) error {
+	keyRelation := fmt.Sprintf("user::%d::to_user::%d", relationCache.UserID, relationCache.ToUserID)
+	valueRelation := fmt.Sprintf("%d::%d", relationCache.CreatedAt, relationCache.ActionType)
+	follower := fmt.Sprintf("follower::%d", relationCache.ToUserID)
+	following := fmt.Sprintf("following::%d", relationCache.UserID)
+	keyExisted, err := isKeyExist(ctx, keyRelation)
 	if err != nil {
 		return ErrorWrap(err, "UpdateRelation KeyExist error")
 	}
-	fmt.Printf("keyExisted:%v\n", keyExisted)
-	if keyExisted == 0 {
-		fmt.Printf("add realtion to redis")
+	if !keyExisted {
 		err := setKey(ctx, keyRelation, valueRelation, 0, RelationMutex)
 		if err != nil {
 			return ErrorWrap(err, "UpdateRelation set read key error")
 		}
-		if relation.ActionType == 0 {
-			fmt.Printf("new relation add follower and following")
-			err = addKeyToSet(ctx, follower, []string{strconv.Itoa(int(relation.UserID))}, RelationMutex)
+		if relationCache.ActionType == relation.RelationActionType_FOLLOW {
+			err = addKeyToSet(ctx, follower, []string{strconv.Itoa(int(relationCache.UserID))}, RelationMutex)
 			if err != nil {
 				return ErrorWrap(err, "UpdateRelation set follower error")
 			}
-			err = addKeyToSet(ctx, following, []string{strconv.Itoa(int(relation.ToUserID))}, RelationMutex)
+			err = addKeyToSet(ctx, following, []string{strconv.Itoa(int(relationCache.ToUserID))}, RelationMutex)
 			if err != nil {
 				return ErrorWrap(err, "UpdateRelation set following error")
 			}
@@ -53,32 +61,33 @@ func UpdateRelation(ctx context.Context, relation *RelationCache) error {
 		}
 		valueSplit := strings.Split(value, "::")
 		redisCreatedAt, redisActionType := valueSplit[0], valueSplit[1]
-		if redisActionType == strconv.Itoa(int(relation.ActionType)) {
+		if StrToRelationActionType(redisActionType) == relationCache.ActionType {
 			return nil
-		} else if strconv.Itoa(int(relation.CreatedAt)) > redisCreatedAt {
-			//说明最新的relation操作为取消关注，则需从follower、following中删除;否则为关注，需要添加
-			if redisActionType == "1" {
-				err = delKeyFormSet(ctx, follower, []string{strconv.Itoa(int(relation.UserID))}, RelationMutex)
-				if err != nil {
-					return ErrorWrap(err, "UpdateRelation set follower error")
-				}
-				err = delKeyFormSet(ctx, following, []string{strconv.Itoa(int(relation.ToUserID))}, RelationMutex)
-				if err != nil {
-					return ErrorWrap(err, "UpdateRelation set following error")
-				}
-			} else {
-				err = addKeyToSet(ctx, follower, []string{strconv.Itoa(int(relation.UserID))}, RelationMutex)
-				if err != nil {
-					return ErrorWrap(err, "UpdateRelation set follower error")
-				}
-				err = addKeyToSet(ctx, following, []string{strconv.Itoa(int(relation.ToUserID))}, RelationMutex)
-				if err != nil {
-					return ErrorWrap(err, "UpdateRelation set following error")
-				}
-			}
+		}
+		//说明消息队列传入的消息为最新且action_type改变，需要根据action_type更新
+		if strconv.Itoa(int(relationCache.CreatedAt)) > redisCreatedAt {
 			err := setKey(ctx, keyRelation, valueRelation, 0, RelationMutex)
 			if err != nil {
 				return ErrorWrap(err, "UpdateRelation")
+			}
+			if StrToRelationActionType(redisActionType) == relation.RelationActionType_UN_FOLLOW {
+				err = delKeyFormSet(ctx, follower, []string{strconv.Itoa(int(relationCache.UserID))}, RelationMutex)
+				if err != nil {
+					return ErrorWrap(err, "UpdateRelation set follower error")
+				}
+				err = delKeyFormSet(ctx, following, []string{strconv.Itoa(int(relationCache.ToUserID))}, RelationMutex)
+				if err != nil {
+					return ErrorWrap(err, "UpdateRelation set following error")
+				}
+			} else if StrToRelationActionType(redisActionType) == relation.RelationActionType_FOLLOW {
+				err = addKeyToSet(ctx, follower, []string{strconv.Itoa(int(relationCache.UserID))}, RelationMutex)
+				if err != nil {
+					return ErrorWrap(err, "UpdateRelation set follower error")
+				}
+				err = addKeyToSet(ctx, following, []string{strconv.Itoa(int(relationCache.ToUserID))}, RelationMutex)
+				if err != nil {
+					return ErrorWrap(err, "UpdateRelation set following error")
+				}
 			}
 		}
 	}

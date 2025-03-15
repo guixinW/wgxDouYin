@@ -59,16 +59,17 @@ func CreateRelation(ctx context.Context, userID uint64, toUserID uint64) error {
 	return err
 }
 
-func DelRelationByUserIDs(ctx context.Context, userID uint64, toUserID uint64) error {
+func DelRelationByUserID(ctx context.Context, userID uint64, toUserID uint64) error {
 	err := GetDB().Clauses(dbresolver.Write).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		relation := new(FollowRelation)
 		if err := tx.Where("user_id = ? AND to_user_id=?", userID, toUserID).First(&relation).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil
+			}
 			return err
-		} else if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil
 		}
+
 		err := tx.Unscoped().Delete(&relation).Error
-		//err := tx.Delete(&relation).Error	//软删除
 		if err != nil {
 			return err
 		}

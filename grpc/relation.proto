@@ -9,6 +9,8 @@ enum RelationActionType {
   FOLLOW = 0;
   // 取消关注
   UN_FOLLOW = 1;
+  // 错误类型
+  WRONG_TYPE = 2;
 }
 
 message RelationActionRequest {

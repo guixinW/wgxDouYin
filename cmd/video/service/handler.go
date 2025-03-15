@@ -76,6 +76,7 @@ func (s *VideoServiceImpl) Feed(ctx context.Context, req *video.FeedRequest) (*v
 		}
 		fmt.Printf("created_at:%v\n", uint64(videoRecord.CreatedAt.Unix()))
 		videoLists = append(videoLists, &video.Video{
+			Id: uint64(videoRecord.ID),
 			Author: &user.User{
 				Id:             uint64(author.ID),
 				Name:           author.UserName,
@@ -213,6 +214,7 @@ func (s *VideoServiceImpl) PublishList(ctx context.Context, req *video.PublishLi
 		}
 		fmt.Printf("created_at:%v\n", uint64(videoRecord.CreatedAt.Unix()))
 		videoLists = append(videoLists, &video.Video{
+			Id: uint64(videoRecord.ID),
 			Author: &user.User{
 				Id:             uint64(author.ID),
 				Name:           author.UserName,

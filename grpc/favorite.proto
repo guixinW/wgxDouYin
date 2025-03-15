@@ -12,17 +12,17 @@ enum VideoActionType {
   CANCEL_LIKE = 2;
   // 取消踩
   CANCEL_DISLIKE= 3;
+  // 错误类型
+  WRONG_TYPE = 4;
 }
 
 message FavoriteActionRequest {
-  // @gotags: json:"user_id"
-  uint64 user_id = 1;
   // @gotags: json:"token_user_id"
-  uint64 token_user_id = 2;
+  uint64 token_user_id = 1;
   // @gotags: json:"video_id"
-  uint64 video_id = 3;
+  uint64 video_id = 2;
   // @gotags: json:"action_type"
-  VideoActionType action_type = 4;
+  VideoActionType action_type = 3;
 }
 
 message FavoriteActionResponse {

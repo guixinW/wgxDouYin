@@ -1,7 +1,9 @@
 go 1.23.2
 
-use pkg
-use cmd
-use dal
-use grpc
-use internal
+use (
+	pkg
+	cmd
+	dal
+	grpc
+	internal
+)
