@@ -1,4 +1,43 @@
 # wgxDouYin
+## Raft
+### 概述
+分布式系统设计的目的一般来说有三个：
+
+1. 保证在某些机器挂掉的情况下，其他存活的机器能够确保系统的正常运行；
+2. 减轻其他机器的负担，各种不修改机器状态的命令能够负载在每一台机器上；
+3. 降低命令从请求到回复的网络延迟，例如一个系统将机器分布在全国各地，每条命令都选择最近的机器去执行，现实应用如CDN。
+
+那么，根据这三个目的，就引入了一个问题：根据上述3，如何确保在海南岛上的用户能和在漠河的用户看到一样的内容？即确保一致性。
+
+Raft是一个确保分布式系统一致性的解决方案。在分布式系统中，多台机器之间协同工作，但如果面向用户，则它们看起来就像是只有一台机器。因此它们之间要解决同步问题，例如当用户A将这个系统中的某个参数Parameter通过某台机器从“NOW”改为“AFTER”后，其他用户的Query能够查看到这个改变，而不是一些Query查看到的是“NOW”，一些Query查看到则是“AFTER”。
+
+### 选举
+
+为了确保系统之间能够同步，Raft为系统中的各个服务器确定了三个身份Leader、Follower、Candidate。Leader在系统中只有一个，它主要负责接收命令，然后再将命令分发给其他机器；Follower是负责接收这些命令并存储的机器；Candidate则是尝试成为Leader的Follower机器。
+
+有了上面的介绍，则引入如下问题：
+
+1. Follower在什么情况下尝试变为Candidate？
+2. Candidate如何成为Leader？
+
+Answer For Q1:
+
+因为Leader在系统中只有一个，所有修改分布式系统内部状态的命令则都会通过Leader确认执行并返回，所以当他挂掉时，整个分布式系统就无法正常运行。因此Raft允许分布式系统中的每一个满足的条件Follower都能够成为Leader，借此来确保系统的可用性。Leader会为每一个Follower发送一个存活确认包Heartbeat Packet，而Follower会开启一个线程监听这个Packet，当Follower在一个容忍时限内未能接收到Packet时，他会认为这个系统的Leader已经挂掉了，它尝试成为Leader，此时它会把自己的身份变成Candidate。系统允许存在多个Candidate，但只会一个Candidate最终成为Leader。
+
+Answer For Q2:
+
+Follower成为Candidate后，它会为自己加上一票，然后发送一个RequestVote，其他Follower收到RequestVote后，则查看自己是否已经投过票，如果未投过，则投给这个Candidate。续…
+
+### 同步
+
+同时系统为每条**命令的日志**也确认了两种状态Commited、Uncommitted、Apply。Commited为那些已经提交的命令，Raft确保Commited的命令日志一定会被Apply，接回概述中的例子即现在系统能够确保Query到的一定为“AFTER”。
+
+3.为什么不是命令而是命令的日志被提交？
+
+### 持久化
+
+### 快照
+
 ## 环境问题
 
 Q1：navicat无法连接到docker内的mysql
