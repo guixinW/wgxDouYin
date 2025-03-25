@@ -13,15 +13,15 @@ import (
 // TokenAuthMiddleware JWT验证中间件.skipRoutes为无需验证的请求
 func TokenAuthMiddleware(serviceDependencyMap map[string]string, keys *keys.KeyManager, skipRoutes ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		serviceName, err := getServiceName(c.FullPath())
-		if err != nil {
-			responseWithError(c, http.StatusUnauthorized, err)
-		}
 		for _, skipRoute := range skipRoutes {
 			if 0 == strings.Compare(c.FullPath(), skipRoute) {
 				c.Next()
 				return
 			}
+		}
+		serviceName, err := getServiceName(c.FullPath())
+		if err != nil {
+			responseWithError(c, http.StatusUnauthorized, err)
 		}
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
