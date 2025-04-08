@@ -62,11 +62,37 @@ func GetFileTemporaryURL(bucketName, objectName string) (string, error) {
 	if len(bucketName) <= 0 || len(objectName) <= 0 {
 		return "", errors.New("invalid argument")
 	}
-	expiry := time.Second * time.Duration(20)
-	PresignedURL, err := minioClient.PresignedGetObject(context.Background(), bucketName, objectName, expiry, nil)
+	expiry := time.Minute * time.Duration(20)
+	ResignedURL, err := minioClient.PresignedGetObject(context.Background(), bucketName, objectName, expiry, nil)
 	if err != nil {
 		return "", err
 	}
-	return PresignedURL.String(), nil
+	return ResignedURL.String(), nil
+}
 
+func GetUploadURL(bucketName, objectName string) (string, error) {
+	if len(bucketName) <= 0 || len(objectName) <= 0 {
+		return "", errors.New("invalid argument")
+	}
+	expiry := time.Minute * time.Duration(60)
+	uploadURl, err := minioClient.PresignedPutObject(context.Background(), bucketName, objectName, expiry)
+	if err != nil {
+		return "", err
+	}
+	return uploadURl.String(), nil
+}
+
+func DeleteObject(bucketName, objectName string) error {
+	exist, err := minioClient.BucketExists(context.Background(), bucketName)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		return errors.New("bucket does not exist")
+	}
+	err = minioClient.RemoveObject(context.Background(), bucketName, objectName, minio.RemoveObjectOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
 }

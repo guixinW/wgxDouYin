@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"time"
 	"wgxDouYin/dal/db"
@@ -55,7 +56,10 @@ func (s *UserServiceImpl) UserRegister(ctx context.Context, req *user.UserRegist
 
 func (s *UserServiceImpl) Login(ctx context.Context, req *user.UserLoginRequest) (resp *user.UserLoginResponse, err error) {
 	logger := zap.InitLogger()
+	start := time.Now()
 	usr, err := db.GetUserByName(ctx, req.Username)
+	end := time.Now()
+	fmt.Printf("数据库查询耗时：%v\n", end.Sub(start))
 	if err != nil {
 		logger.Errorln(err.Error())
 		res := &user.UserLoginResponse{
@@ -70,6 +74,7 @@ func (s *UserServiceImpl) Login(ctx context.Context, req *user.UserLoginRequest)
 		}
 		return res, nil
 	}
+	start = time.Now()
 	if tool.PasswordCompare(req.Password, usr.Password) == false {
 		logger.Errorf("%v尝试登录，但是密码%v错误", req.Username, req.Password)
 		res := &user.UserLoginResponse{
@@ -78,6 +83,8 @@ func (s *UserServiceImpl) Login(ctx context.Context, req *user.UserLoginRequest)
 		}
 		return res, nil
 	}
+	end = time.Now()
+	fmt.Printf("比较密钥耗时：%v\n", end.Sub(start))
 	claims := myJwt.CustomClaims{
 		UserId: uint64(usr.ID),
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -86,7 +93,10 @@ func (s *UserServiceImpl) Login(ctx context.Context, req *user.UserLoginRequest)
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
+	start = time.Now()
 	token, err := myJwt.CreateToken(KeyManager.GetPrivateKey(), claims)
+	end = time.Now()
+	fmt.Printf("签发token耗时：%v\n", end.Sub(start))
 	if err != nil {
 		logger.Errorf("发生错误:%v", err.Error())
 		res := &user.UserLoginResponse{

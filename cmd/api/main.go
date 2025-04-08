@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"net/http"
+	_ "net/http/pprof" // 注册 pprof 的 handler
 	"wgxDouYin/cmd/api/handler"
 	"wgxDouYin/cmd/api/rpc"
 	"wgxDouYin/pkg/middleware"
@@ -37,7 +39,9 @@ func InitRouter() *gin.Engine {
 		panic(err)
 	}
 	wgxDouYin := router.Group("/wgxdouyin")
-	wgxDouYin.Use(middleware.TokenAuthMiddleware(ServiceDependencyMap, rpc.KeysManager, skipRoutes...))
+	wgxDouYin.Use(
+		middleware.ServiceAvailabilityMiddleware(ServiceNameMap, rpc.KeysManager),
+		middleware.TokenAuthMiddleware(ServiceDependencyMap, rpc.KeysManager, skipRoutes...))
 	{
 		user := wgxDouYin.Group("/user")
 		{
@@ -57,6 +61,7 @@ func InitRouter() *gin.Engine {
 			publish.GET("/feed/", handler.Feed)
 			publish.GET("/list/", handler.PublishList)
 			publish.POST("/action/", handler.PublishAction)
+			publish.GET("/generatePostURL/", handler.PublishPostURL)
 		}
 		favorite := wgxDouYin.Group("/favorite")
 		{
@@ -68,6 +73,12 @@ func InitRouter() *gin.Engine {
 }
 
 func main() {
+	go func() {
+		fmt.Println("pprof 监听在 http://localhost:6060/debug/pprof/")
+		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+			panic("pprof 启动失败: " + err.Error())
+		}
+	}()
 	r := InitRouter()
 	if err := r.Run(apiServerAddr); err != nil {
 		panic(err)

@@ -29,7 +29,7 @@ func (s *FavoriteServiceImpl) FavoriteAction(ctx context.Context, req *favorite.
 		VideoID:    req.VideoId,
 		UserID:     req.TokenUserId,
 		ActionType: req.ActionType,
-		CreatedAt:  uint64(time.Now().UnixMilli()),
+		CreatedAt:  time.Now(),
 	}
 	jsonRc, err := json.Marshal(favoriteMessage)
 	if err != nil {

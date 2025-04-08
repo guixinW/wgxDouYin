@@ -35,14 +35,20 @@ func FavoriteAction(c *gin.Context) {
 		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Errorf("操作类型不合法").Error()))
 		return
 	}
+	c.JSON(http.StatusOK, response.FavoriteAction{
+		Base: response.Base{
+			StatusCode: 0,
+			StatusMsg:  "test",
+		},
+	})
 	req := &favoriteGrpc.FavoriteActionRequest{
 		TokenUserId: tokenUserId.(uint64),
 		VideoId:     videoId,
 		ActionType:  actionType,
 	}
 	res, err := rpc.FavoriteAction(c, req)
-	if err != nil {
-		c.JSON(http.StatusOK, response.ErrorResponse(err.Error()))
+	if res == nil || err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
 		return
 	}
 	if res.StatusCode == -1 {
@@ -58,5 +64,19 @@ func FavoriteAction(c *gin.Context) {
 }
 
 func FavoriteList(c *gin.Context) {
-
+	res, err := rpc.FavoriteList(c, &favoriteGrpc.FavoriteListRequest{})
+	if res == nil || err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
+		return
+	}
+	if res.StatusCode == -1 {
+		c.JSON(http.StatusOK, response.ErrorResponse(res.StatusMsg))
+		return
+	}
+	c.JSON(http.StatusOK, response.FavoriteAction{
+		Base: response.Base{
+			StatusCode: 0,
+			StatusMsg:  res.StatusMsg,
+		},
+	})
 }

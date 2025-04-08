@@ -49,7 +49,7 @@ func GetUserByIDs(ctx context.Context, userIDs []uint64) ([]*User, error) {
 // GetUserByName 根据用户名获取用户信息
 func GetUserByName(ctx context.Context, userName string) (*User, error) {
 	res := new(User)
-	if err := GetDB().Clauses(dbresolver.Read).WithContext(ctx).Select("id, user_name, password").Where("user_name = ?", userName).First(&res).Error; err == nil {
+	if err := GetDB().Clauses(dbresolver.Read).WithContext(ctx).Select("id, user_name, password").Where("user_name = ?", userName).Limit(1).Find(&res).Error; err == nil {
 		return res, nil
 	} else if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil

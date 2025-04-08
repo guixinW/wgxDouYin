@@ -2,6 +2,7 @@ package keys
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"github.com/pkg/errors"
 	"sync"
 	"time"
@@ -80,6 +81,13 @@ func (j *KeyManager) GetPrivateKey() *ecdsa.PrivateKey {
 		return j.serverPrivateKey
 	}
 	return nil
+}
+
+func (j *KeyManager) PrintServiceAndKey() {
+	j.serverToPublicKey.data.Range(func(key, value interface{}) bool {
+		fmt.Printf("Server: %s, Key: %s\n", key.(string), value.(*ecdsa.PublicKey))
+		return true
+	})
 }
 
 // addServerPublicKey 通过服务名保存公钥

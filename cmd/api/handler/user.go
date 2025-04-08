@@ -25,7 +25,7 @@ func UserRegister(c *gin.Context) {
 		Password: password,
 	}
 	res, err := rpc.Register(c, req)
-	if res == nil {
+	if res == nil || err != nil {
 		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
 		return
 	}
@@ -55,17 +55,13 @@ func UserLogin(c *gin.Context) {
 		Password: password,
 	}
 	res, err := rpc.Login(c, req)
-	if res == nil {
+	if res == nil || err != nil {
 		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
 		return
 	}
 	if res.StatusCode == -1 {
-		c.JSON(http.StatusOK, response.Login{
-			Base: response.Base{
-				StatusCode: -1,
-				StatusMsg:  res.StatusMsg,
-			},
-		})
+		fmt.Printf("2:%v\n", res.StatusMsg)
+		c.JSON(http.StatusOK, response.ErrorResponse(res.StatusMsg))
 		return
 	}
 	c.JSON(http.StatusOK, response.Login{
@@ -89,9 +85,13 @@ func UserInform(c *gin.Context) {
 		UserId:      id,
 		TokenUserId: id,
 	}
-	res, _ := rpc.UserInform(c, req)
+	res, err := rpc.UserInform(c, req)
+	if res == nil || err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
+		return
+	}
 	if res.StatusCode == -1 {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse("用户名或者密码不能为空"))
+		c.JSON(http.StatusOK, response.ErrorResponse(res.StatusMsg))
 		return
 	}
 	c.JSON(http.StatusOK, response.UserInform{

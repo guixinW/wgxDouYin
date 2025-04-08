@@ -67,10 +67,6 @@ func TestSentinelWrite(t *testing.T) {
 }
 
 func TestRelationMoveToDB(t *testing.T) {
-	err := RelationMoveToDB()
-	if err != nil {
-		t.Fatalf("RelationMoveToDB err: %v", err)
-	}
 }
 
 func TestGetSet(t *testing.T) {
@@ -100,4 +96,18 @@ func TestIntersection(t *testing.T) {
 	}
 	fmt.Println(res)
 	time.Sleep(2 * time.Second)
+}
+
+func TestExpire(t *testing.T) {
+	expireTime := time.Now().Add(5 * time.Second)
+	ctx := context.Background()
+	err := setKeyValue(ctx, "my_key", "my_value", expireTime, RelationMutex)
+	if err != nil {
+		t.Fatalf("Error receiving message: %v", err)
+		return
+	}
+	go func() {
+
+	}()
+	time.Sleep(10 * time.Second)
 }

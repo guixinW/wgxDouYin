@@ -18,16 +18,19 @@ func InitUser(config *viper.Config) {
 }
 
 func Register(ctx context.Context, req *user.UserRegisterRequest) (*user.UserRegisterResponse, error) {
-	fmt.Println("call Register")
-	return userClient.UserRegister(ctx, req)
+	return nil, nil
+	//fmt.Println("call Register")
+	//return userClient.UserRegister(ctx, req)
 }
 
 func Login(ctx context.Context, req *user.UserLoginRequest) (*user.UserLoginResponse, error) {
-	fmt.Println("call Login")
+	//return nil, nil
+	//fmt.Println("call Login")
 	return userClient.Login(ctx, req)
 }
 
 func UserInform(ctx context.Context, req *user.UserInfoRequest) (*user.UserInfoResponse, error) {
-	fmt.Println("call UserInform")
-	return userClient.UserInfo(ctx, req)
+	return nil, nil
+	//fmt.Println("call UserInform")
+	//return userClient.UserInfo(ctx, req)
 }

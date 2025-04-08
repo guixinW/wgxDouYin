@@ -37,8 +37,8 @@ func RelationAction(c *gin.Context) {
 		ActionType:  actionType,
 	}
 	res, err := rpc.RelationAction(c, req)
-	if err != nil {
-		c.JSON(http.StatusOK, response.ErrorResponse(err.Error()))
+	if res == nil || err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
 		return
 	}
 	if res.StatusCode == -1 {
@@ -69,8 +69,8 @@ func FriendList(c *gin.Context) {
 		UserId:      userId,
 	}
 	res, err := rpc.RelationFriendList(c, req)
-	if err != nil {
-		c.JSON(http.StatusOK, response.ErrorResponse(err.Error()))
+	if res == nil || err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
 		return
 	}
 	if res.StatusCode == -1 {
@@ -102,8 +102,8 @@ func FollowingList(c *gin.Context) {
 		UserId:      userId,
 	}
 	res, err := rpc.RelationFollowList(c, req)
-	if err != nil {
-		c.JSON(http.StatusOK, response.ErrorResponse(err.Error()))
+	if res == nil || err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
 		return
 	}
 	if res.StatusCode == -1 {

@@ -8,7 +8,6 @@ import (
 	"wgxDouYin/grpc/user"
 	"wgxDouYin/grpc/video"
 	"wgxDouYin/pkg/minio"
-	"wgxDouYin/pkg/viper"
 )
 
 type VideoServiceImpl struct {
@@ -117,25 +116,12 @@ func (s *VideoServiceImpl) PublishAction(ctx context.Context, req *video.Publish
 		}
 		return res, nil
 	}
-	maxSize := viper.Init("video").Viper.GetInt("video.maxSizeLimit")
-	size := len(req.Data) / (1024 * 1024)
-	if size > maxSize {
-		logger.Errorln("视频文件过大")
-		res := &video.PublishActionResponse{
-			StatusCode: -1,
-			StatusMsg:  fmt.Sprintf("该视频文件大于%dMB，上传受限", maxSize),
-		}
-		return res, nil
-	}
-	createTimestamp := time.Now().UnixMilli()
-	videoTitle := fmt.Sprintf("%d_%s_%d.mp4", req.TokenUserId, req.Title, createTimestamp)
 	v := &db.Video{
 		Title:    req.Title,
-		PlayUrl:  videoTitle,
+		PlayUrl:  req.PlayUrl,
 		AuthorID: req.TokenUserId,
 	}
 	err = db.CreateVideo(ctx, v)
-	fmt.Printf("v id:%v\n", v.ID)
 	if err != nil {
 		logger.Errorln(err.Error())
 		res := &video.PublishActionResponse{
@@ -144,16 +130,11 @@ func (s *VideoServiceImpl) PublishAction(ctx context.Context, req *video.Publish
 		}
 		return res, nil
 	}
-	go func() {
-		err := VideoPublish(req.Data, videoTitle)
-		if err != nil {
-			e := db.DeleteVideoByID(ctx, v.ID, req.TokenUserId)
-			if e != nil {
-				logger.Errorf("视频记录删除失败：%s", err.Error())
-			}
-		}
-	}()
-	return nil, nil
+	res := &video.PublishActionResponse{
+		StatusCode: 0,
+		StatusMsg:  "视频发布成功",
+	}
+	return res, nil
 }
 
 func (s *VideoServiceImpl) PublishList(ctx context.Context, req *video.PublishListRequest) (resp *video.PublishListResponse, err error) {

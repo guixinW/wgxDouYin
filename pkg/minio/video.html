@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <title>视频播放器</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            font-family: sans-serif;
+            background-color: #f9f9f9;
+        }
+
+        video {
+            width: 80%;
+            max-width: 800px;
+            margin-top: 20px;
+            border: 2px solid #ccc;
+            border-radius: 12px;
+        }
+
+        input {
+            width: 80%;
+            max-width: 800px;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<h1>在线播放 MinIO 视频</h1>
+<input id="urlInput" type="text" placeholder="粘贴你的 MinIO 视频链接" />
+<button onclick="playVideo()">播放</button>
+
+<video id="videoPlayer" controls>
+    您的浏览器不支持 video 标签。
+</video>
+
+<script>
+    function playVideo() {
+        const url = document.getElementById('urlInput').value;
+        const video = document.getElementById('videoPlayer');
+        video.src = url;
+        video.load();
+        video.play();
+    }
+</script>
+</body>
+</html>

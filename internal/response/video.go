@@ -16,3 +16,9 @@ type Feed struct {
 	NextTime  int64          `json:"next_time"`
 	VideoList []*video.Video `json:"video_list"`
 }
+
+type PublishPostURL struct {
+	Base
+	UploadUrl string `json:"url"`
+	PlayUrl   string `json:"play_url"`
+}

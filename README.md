@@ -1,6 +1,7 @@
-# wgxDouYin
 ## Raft
+
 ### 概述
+
 分布式系统设计的目的一般来说有三个：
 
 1. 保证在某些机器挂掉的情况下，其他存活的机器能够确保系统的正常运行；
@@ -36,7 +37,11 @@ Follower成为Candidate后，它会为自己加上一票，然后发送一个Req
 
 ### 持久化
 
+…
+
 ### 快照
+
+…
 
 ## 环境问题
 
@@ -93,9 +98,9 @@ FLUSH PRIVILEGES;
 
 1. grpc会实现一个resolver，就像域名最终会被域名服务器转换为ip地址一样。grpc client的连接名也会被转化为具体的ip地址。
 2. 和etcd联合使用的问题：为了使grpc能够做动态的服务发现，可将其解析仓库变为etcd，让etcd客户端监听，当etcd中某个服务的地址发生变化时，etcd客户端能够通过其watcher通知grpc。
-    - 需求：希望将etcd与grpc松耦合，因为在初始化一个grpc的resolver时传入一个ip地址非常奇怪。同时松耦合后，这个etcd还能够用于其它需要查询etcd key、value的应用。比如后面还会查询服务的公钥。
-    - 方案：因此考虑设计一个interface，用于将etcd client查询到的键值对同步更新到resolver以及key manager当中。只要resolver、keyManager实现了这个interface，当使用etcd时，只需向其注册自身。
-    - 问题：etcd client实现了Watch函数用于监听特定的keyPrefix在服务端发生的变化，同时etcd client会在第一次调用rpc服务时初始化。当其初始化时，etcd client会通过Watcher监听etcd服务器某个keyPrefix的变化。我的写法是当其发生变化时，会同步调用resolver、key manager的update，但是resolver的Builder仅会在gRPC发器服务解析时才会被调用，因此服务的发现会先于解析器的创建，因此需要一个暂存服务地址的空间。
+   - 需求：希望将etcd与grpc松耦合，因为在初始化一个grpc的resolver时传入一个ip地址非常奇怪。同时松耦合后，这个etcd还能够用于其它需要查询etcd key、value的应用。比如后面还会查询服务的公钥。
+   - 方案：因此考虑设计一个interface，用于将etcd client查询到的键值对同步更新到resolver以及key manager当中。只要resolver、keyManager实现了这个interface，当使用etcd时，只需向其注册自身。
+   - 问题：etcd client实现了Watch函数用于监听特定的keyPrefix在服务端发生的变化，同时etcd client会在第一次调用rpc服务时初始化。当其初始化时，etcd client会通过Watcher监听etcd服务器某个keyPrefix的变化。我的写法是当其发生变化时，会同步调用resolver、key manager的update，但是resolver的Builder仅会在gRPC发器服务解析时才会被调用，因此服务的发现会先于解析器的创建，因此需要一个暂存服务地址的空间。
 
 常用命令：protoc --proto_path=. --go_out=./ --go-grpc_out=./ --go_opt=Muser.proto=wgxDouYin/grpc/user relation.proto
 
@@ -132,6 +137,17 @@ FLUSH PRIVILEGES;
 
    因此在进行服务调用前，必须使用查看该服务的依赖服务，再查询依赖服务的公钥，用此公钥验证请求中的jwt是否合法。
 
+2. ServiceAvailabilityMiddleware
+
+参数：
+
+- serviceNameMap：服务依赖映射
+- keys：密钥管理对象
+
+函数运行过程：
+
+- 根据请求路径适用serviceNameMap获取服务名ServiceName
+- 查看keys中对应ServiceName的公钥是否存在，依据此判断该服务是否上线，若未上线，返回错误，否则传入下一个中间件
 
 ## User
 
@@ -166,3 +182,175 @@ FLUSH PRIVILEGES;
    - 读取RPC Request发送来的请求体，获取用户名
    - 使用用户名调用MySQL查询函数查询用户是否存在
    - 若存在则返回User信息
+
+## Relation
+
+### cmd
+
+1. RelationAction
+
+函数运行过程：
+
+- 读取RPC Request发送来的请求体，获取TokenUserId, ToUserId，ActionType
+- 判断TokenUserId是否与ToUserId相同，相同则说明用户试图关注自己，返回错误
+- 根据RelationActionType作出如下操作：
+   - 若RelationActionType为关注，则使用MySQL事务函数CreateRelation，若存在相同记录，则返回RPC Response提示用户不能重复关注
+   - 若RelationActionType为取消关注，则调用事务函数DelRelationByUserId，若数据库不存在对应Relation记录则返回一个RPC Response提示用户无法取消关注一个未关注的用户
+   - 若RelationActionType类型错误，则返回错误RPC Response
+- 将上述操作组成RelationCache对象，放入RabbitMQ中让Redis消费
+
+注释：由于使用Redis实现了24小时热点用户，因此Redis只需要消费RelationCache时间大于当前时间-24h的消息。同时Redis还会自动为KeyValue队设置24小时过期时间，并使用过期触发事件实时更新热点用户ZSet以及各个用户的关注、被关注信息。一种场景是当用户A关注了用户B，消息进入Redis，热点用户ZSet根据这条记录将对应的FansCount加1，然后不超过24小时用户A取关了用户B，Redis消费了这条消息，并将FansCount减1，这很好。但是，若24小时后，用户A取关了用户B，这条消息由于产生的时间最新，因此会通过消息队列传入Redis，但Redis并不存在相应的关注记录。解决办法是在删除时判断删除记录的CreateAt时间，若CreateAt+24h大于当前时间，则不加入消息队列，反之则说明该记录在Redis还未过期，需要传入消息队列让Redis修改。
+
+1. RelationFollowList
+
+函数运行过程：
+
+- 读取RPC Request发送来的请求体，获取TokenUserId, ToUserId，ActionType
+- 判断TokenUserId是否与ToUserId相同，相同则说明用户试图关注自己，返回错误
+- 根据userId调用Redis数据库函数GetFollowingIDs用于从Redis中获取userId所属用户关注的其他用户followingIds
+- 使用followingIds中的userId调用Redis数据库函数中的GetFollowerCount、GetFollowingCount，获取这些用户的被关注数以及关注数
+- 返回用户TokenUserId关注用户的详细信息
+
+1. RelationFollowerList
+
+函数运行过程：
+
+- 读取RPC Request发送来的请求体，获取TokenUserId, ToUserId，ActionType
+- 判断TokenUserId是否与ToUserId相同，相同则说明用户试图关注自己，返回错误
+- 根据userId调用Redis数据库函数GetFollowerIDs用于从Redis中获取userId所属用户关注的其他用户followingIds
+- 使用followerIds中的userId调用Redis数据库函数中的GetFollowerCount、GetFollowingCount，获取这些用户的被关注数以及关注数
+- 返回用户TokenUserId关注用户的详细信息
+
+1. RelationFriendList
+
+函数运行过程：
+
+- 读取RPC Request发送来的请求体，获取TokenUserId, ToUserId，ActionType
+- 判断TokenUserId是否与ToUserId相同，相同则说明用户试图关注自己，返回错误
+- 根据userId调用Redis数据库函数GetFriends用于从Redis中获取userId的好友信息
+- 使用friendsIds中的userId调用Redis数据库函数中的GetFollowerCount、GetFollowingCount，获取这些用户的被关注数以及关注数
+- 返回用户TokenUserId好友的详细信息
+
+## Video
+
+## Favorite
+
+### cmd
+
+1. FavoriteAction
+- 读取RPC Request发送来的请求体，获取TokenUserId, ToUserId，ActionType
+- 根据FavoriteActionType作出如下操作：
+   - 若FavoriteActionType为LIKE，则使用MySQL事务函数CreateVideoFavorite，若存在相同记录，则返回RPC Response提示用户不能重复点赞
+   - 若ActionType为CANCEL_LIKE，则调用事务函数DelFavoriteByUserVideoID，若数据库不存在对应Relation记录则返回一个RPC Response提示用户无法取消点赞一个未点赞的视频
+   - 若FavoriteActionType为DISLIKE，则先查看MySQL事务函数CreateVideoFavorite，若存在相同记录，则返回RPC Response提示用户不能重复点赞
+   - 若ActionType为CANCEL_DISLIKE，则调用事务函数DelFavoriteByUserVideoID，若数据库不存在对应Relation记录则返回一个RPC Response提示用户无法取消关注一个未关注的用户
+- 将上述操作组成RelationCache对象，放入RabbitMQ中让Redis消费
+
+# 测试报告
+
+机器：Macbook M2
+
+CPU核心数：8
+
+内存大小：16G
+
+固态硬盘大小：256G
+
+## ApiRouter
+
+测试工具：wrk
+
+### UserLogin
+
+去掉微服务请求后，测试结果如下：
+
+```bash
+wrk -t16 -c800 -d30s -s post_login.lua http://127.0.0.1:8089/wgxdouyin/user/login/16 threads and 800 connections
+Thread Stats   Avg      Stdev     Max   +/- Stdev
+Latency    67.52ms   41.29ms 431.42ms   68.65%
+Req/Sec   773.11    820.98     8.15k    96.42%
+371239 requests in 30.09s, 69.39MB read
+Socket errors: connect 0, read 1917, write 0, timeout 0
+Requests/sec:  12337.55
+Transfer/sec:      2.31MB
+
+wrk -t8 -c8 -d30s -s post_login.lua http://127.0.0.1:8089/wgxdouyin/user/login/
+8 threads and 8 connections
+Thread Stats   Avg      Stdev     Max   +/- Stdev
+Latency     6.82ms   21.28ms 223.57ms   91.67%
+Req/Sec     1.57k     1.69k   14.39k    96.62%
+372646 requests in 30.05s, 69.66MB read
+Requests/sec:  12401.52
+Transfer/sec:      2.32MB
+
+wrk -t1 -c1 -d30s -s post_login.lua http://127.0.0.1:8089/wgxdouyin/user/login/
+1 threads and 1 connections
+Thread Stats   Avg      Stdev     Max   +/- Stdev
+Latency     4.77ms   17.00ms 124.87ms   92.66%
+Req/Sec    12.58k     8.08k   35.31k    78.33%
+375814 requests in 30.04s, 70.25MB read
+Requests/sec:  12511.33
+Transfer/sec:      2.34MB 
+```
+
+可见在该机器中，最大可承载的请求数量约在12500 Requests/sec，这也是UserLogin接口的上限，后续可根据此请求数作为Baseline，逐一添加微服务、数据库、消息队列各个部件一一对比接口的请求数量
+
+下面时加上微服务、数据库操作后的测试结果：
+
+```lua
+wrk.method = "POST"
+wrk.headers["Content-Type"] = "application/x-www-form-urlencoded"
+users = {
+    { username = "test1", password = "12345" },
+    { username = "test2", password = "12345" },
+    { username = "test3", password = "12345" },
+    { username = "test4", password = "12345" },
+    { username = "test5", password = "12345" },
+}
+
+function request()
+    local user = users[math.random(#users)]
+    local body = "username=" .. user.username .. "&password=" .. user.password
+    return wrk.format(nil, nil, nil, body)
+end
+```
+
+```bash
+wrk -t8 -c8 -d30s -s post_login.lua http://127.0.0.1:8089/wgxdouyin/user/login/
+  8 threads and 8 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    40.32ms    8.59ms 110.60ms   73.50%
+    Req/Sec    24.62      5.67    90.00     97.22%
+  5956 requests in 30.10s, 2.22MB read
+Requests/sec:    197.86
+Transfer/sec:     75.55KB
+
+wrk -t16 -c100 -d30s -s post_login.lua http://127.0.0.1:8089/wgxdouyin/user/login/
+  16 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   505.08ms  303.90ms   1.99s    73.78%
+    Req/Sec    13.19      8.02    50.00     76.04%
+  5819 requests in 30.10s, 2.17MB read
+  Socket errors: connect 0, read 0, write 0, timeout 11
+Requests/sec:    193.31
+Transfer/sec:     73.81KB
+
+wrk -t8 -c50 -d30s -s post_login.lua http://127.0.0.1:8089/wgxdouyin/user/login/ 
+  8 threads and 50 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   242.89ms  128.13ms   1.25s    74.37%
+    Req/Sec    25.50     12.28    70.00     58.62%
+  6052 requests in 30.10s, 2.26MB read
+Requests/sec:    201.07
+Transfer/sec:     76.78KB
+```
+
+可见整个系统的对于登陆接口，最多允许一秒内同时登陆200次。同时，根据后台报错，发现如下问题，即一些查询超过200ms，被标记为慢查询。
+
+```bash
+2025/04/07 15:30:53 /Users/wangguixin/wgx/Project/wgxDouYin/dal/db/user.go:52 SLOW SQL >= 200ms
+[289.575ms] [rows:1] SELECT id, user_name, password FROM `users` WHERE user_name = 'test2' AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT 1
+
+2025/04/07 15:30:53 /Users/wangguixin/wgx/Project/wgxDouYin/dal/db/user.go:52 SLOW SQL >= 200ms
+[294.447ms] [rows:1] SELECT id, user_name, password FROM `users` WHERE user_name = 'test5' AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT 1
+```

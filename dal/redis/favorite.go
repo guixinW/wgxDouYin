@@ -3,8 +3,8 @@ package wgxRedis
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
+	"time"
 	"wgxDouYin/grpc/favorite"
 )
 
@@ -24,38 +24,39 @@ func StrToVideoActionType(str string) favorite.VideoActionType {
 type FavoriteCache struct {
 	VideoID    uint64                   `json:"video_id" redis:"video_id"`
 	UserID     uint64                   `json:"user_id" redis:"user_id"`
+	CreatedAt  time.Time                `json:"created_at" redis:"created_at"`
 	ActionType favorite.VideoActionType `json:"action_type" redis:"action_type"`
-	CreatedAt  uint64                   `json:"created_at" redis:"created_at"`
 }
 
 func UpdateFavorite(ctx context.Context, favoriteCache *FavoriteCache) error {
 	keyFavorite := fmt.Sprintf("video::%d::user::%d", favoriteCache.VideoID, favoriteCache.UserID)
-	valueFavorite := fmt.Sprintf("%d::%d", favoriteCache.CreatedAt, favoriteCache.ActionType)
+	valueFavorite := fmt.Sprintf("%d::%d", favoriteCache.CreatedAt.UnixMilli(), favoriteCache.ActionType)
+	expireTime := favoriteCache.CreatedAt.Add(10 * time.Second)
 	keyExisted, err := isKeyExist(ctx, keyFavorite)
 	if err != nil {
 		return ErrorWrap(err, "UpdateFavorite KeyExist error")
 	}
 	if !keyExisted {
-		err := setKey(ctx, keyFavorite, valueFavorite, 0, RelationMutex)
+		err := setKeyValue(ctx, keyFavorite, valueFavorite, expireTime, RelationMutex)
 		if err != nil {
-			return ErrorWrap(err, "UpdateRelation set read key error")
+			return ErrorWrap(err, "UpdateFavorite set read key error")
 		}
 	} else {
-		value, err := getKeyValue(ctx, keyFavorite)
+		existFavoriteValue, err := getKeyValue(ctx, keyFavorite)
 		if err != nil {
-			return ErrorWrap(err, "UpdateRelation get keyRelationRead error")
+			return ErrorWrap(err, "UpdateFavorite get key error")
 		}
-		valueSplit := strings.Split(value, "::")
-		redisCreatedAtStr, redisActionTypeStr := valueSplit[0], valueSplit[1]
-		if StrToVideoActionType(redisActionTypeStr) == favoriteCache.ActionType {
+		existFavoriteValueSplit := strings.Split(existFavoriteValue, "::")
+		existFavoriteCreatedAt, err := time.Parse("2006-01-02 15:04:05.000", existFavoriteValueSplit[0])
+		if err != nil {
+			return ErrorWrap(err, "UpdateFavorite parse redis time error")
+		}
+		existFavoriteActionType := StrToVideoActionType(existFavoriteValueSplit[1])
+		if existFavoriteActionType == favoriteCache.ActionType {
 			return nil
 		}
-		redisCreatedAt, err := strconv.ParseUint(redisCreatedAtStr, 10, 64)
-		if err != nil {
-			return ErrorWrap(err, "UpdateFavorite ParseInt error")
-		}
-		if redisCreatedAt < favoriteCache.CreatedAt {
-			err := setKey(ctx, keyFavorite, valueFavorite, 0, RelationMutex)
+		if favoriteCache.CreatedAt.After(existFavoriteCreatedAt) {
+			err := setKeyValue(ctx, keyFavorite, valueFavorite, expireTime, RelationMutex)
 			if err != nil {
 				return ErrorWrap(err, "UpdateRelation")
 			}

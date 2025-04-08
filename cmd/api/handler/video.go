@@ -1,16 +1,16 @@
 package handler
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"io"
+	"github.com/google/uuid"
 	"net/http"
 	"strconv"
 	"time"
 	"wgxDouYin/cmd/api/rpc"
 	videoGrpc "wgxDouYin/grpc/video"
 	"wgxDouYin/internal/response"
+	"wgxDouYin/pkg/minio"
 )
 
 func PublishAction(c *gin.Context) {
@@ -24,25 +24,23 @@ func PublishAction(c *gin.Context) {
 		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Errorf("标题不能为空").Error()))
 		return
 	}
-	file, err := c.FormFile("data")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse(fmt.Errorf("上传视频加载失败").Error()))
-		return
-	}
-	src, err := file.Open()
-	buf := bytes.NewBuffer(nil)
-	if _, err := io.Copy(buf, src); err != nil {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse(fmt.Errorf("上传视频加载失败").Error()))
+	playUrl := c.PostForm("PlayUrl")
+	if playUrl == "" {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Errorf("PlayUrl不能为空").Error()))
 		return
 	}
 	req := videoGrpc.PublishActionRequest{
 		TokenUserId: tokenUserId.(uint64),
-		Data:        buf.Bytes(),
+		PlayUrl:     playUrl,
 		Title:       title,
 	}
 	res, err := rpc.PublishAction(c, &req)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse(err.Error()))
+	if res == nil || err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
+		return
+	}
+	if res.StatusCode == -1 {
+		c.JSON(http.StatusOK, response.ErrorResponse(res.StatusMsg))
 		return
 	}
 	c.JSON(http.StatusOK, response.PublishAction{
@@ -71,8 +69,8 @@ func Feed(c *gin.Context) {
 		TokenUserId: tokenUserId.(uint64),
 	}
 	res, err := rpc.Feed(c, req)
-	if err != nil {
-		c.JSON(http.StatusOK, response.ErrorResponse(err.Error()))
+	if res == nil || err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
 		return
 	}
 	if res.StatusCode == -1 {
@@ -104,8 +102,8 @@ func PublishList(c *gin.Context) {
 		TokenUserId: tokenUserId.(uint64),
 	}
 	res, err := rpc.PublishList(c, req)
-	if err != nil {
-		c.JSON(http.StatusOK, response.ErrorResponse(err.Error()))
+	if res == nil || err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
 		return
 	}
 	if res.StatusCode == -1 {
@@ -118,5 +116,28 @@ func PublishList(c *gin.Context) {
 			StatusMsg:  res.StatusMsg,
 		},
 		VideoList: res.VideoList,
+	})
+}
+
+func PublishPostURL(c *gin.Context) {
+	title := c.Query("title")
+	fmt.Println(title)
+	if title == "" {
+		c.JSON(http.StatusOK, response.ErrorResponse("名称非法"))
+		return
+	}
+	videoBucketName := minio.VideoBucketName
+	PlayUrl := fmt.Sprintf("%s_%s_.mp4", uuid.New().String(), title)
+	UploadUrl, err := minio.GetUploadURL(videoBucketName, PlayUrl)
+	if err != nil {
+		c.JSON(http.StatusOK, response.ErrorResponse(err.Error()))
+	}
+	c.JSON(http.StatusOK, response.PublishPostURL{
+		Base: response.Base{
+			StatusCode: 0,
+			StatusMsg:  "ok",
+		},
+		UploadUrl: UploadUrl,
+		PlayUrl:   PlayUrl,
 	})
 }

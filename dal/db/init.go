@@ -60,9 +60,10 @@ func init() {
 		panic(err.Error())
 	}
 	dsn2 := getDsn("mysql.replica1")
+	dsn3 := getDsn("mysql.replica2")
 	err = db.Use(dbresolver.Register(dbresolver.Config{
 		Sources:           []gorm.Dialector{mysql.Open(dsn1)},
-		Replicas:          []gorm.Dialector{mysql.Open(dsn2)},
+		Replicas:          []gorm.Dialector{mysql.Open(dsn2), mysql.Open(dsn3)},
 		Policy:            dbresolver.RandomPolicy{},
 		TraceResolverMode: false,
 	}))
@@ -77,8 +78,8 @@ func init() {
 		zapLogger.Fatalln(err.Error())
 	}
 	if _db != nil {
-		_db.SetMaxIdleConns(1000)
-		_db.SetMaxIdleConns(20)
+		_db.SetMaxIdleConns(100)
+		_db.SetMaxOpenConns(1000)
 		_db.SetConnMaxIdleTime(60 * time.Minute)
 	}
 }

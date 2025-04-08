@@ -1,15 +1,12 @@
 package jwt
 
 import (
+	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"testing"
 	"time"
 	"wgxDouYin/pkg/keys"
 )
-
-func TestLoadJWT(t *testing.T) {
-
-}
 
 func TestParseJWT(t *testing.T) {
 	privateKey, publicKey, _ := keys.CreateKeyPair()
@@ -20,8 +17,10 @@ func TestParseJWT(t *testing.T) {
 			Issuer:    "test",
 			IssuedAt:  jwt.NewNumericDate(time.Now())},
 	}
+	start := time.Now()
 	tokenString, err := CreateToken(privateKey, originClaims)
-	time.Sleep(5 * time.Second)
+	end := time.Now().Sub(start)
+	fmt.Printf("密钥签发耗时:%v\n", end)
 	parseClaims, err := ParseToken(publicKey, tokenString)
 	if err != nil {
 		t.Fatalf("parse token string error %v", err)

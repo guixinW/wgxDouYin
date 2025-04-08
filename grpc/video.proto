@@ -47,8 +47,8 @@ message FeedResponse {
 message PublishActionRequest{
   // @gotags: json:"token_user_id"
   uint64 token_user_id = 1;
-  // @gotags: json:"data"
-  bytes data = 2;
+  // @gotags: json:"play_url"
+  string PlayUrl = 2;
   // @gotags: json:"title"
   string title = 3;
 }

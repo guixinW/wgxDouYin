@@ -126,3 +126,12 @@ func TestGetFileTemporaryURL(t *testing.T) {
 	}
 	fmt.Println(url)
 }
+
+func TestDeleteObject(t *testing.T) {
+	bucketName := "tiktok-videos"
+	objectName := "3001a527-6caf-4fe7-8992-abc180c3d1c6_生活大爆炸_.mp4"
+	err := DeleteObject(bucketName, objectName)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+}

@@ -4,13 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 	"wgxDouYin/dal/db"
 	wgxRedis "wgxDouYin/dal/redis"
 	relation "wgxDouYin/grpc/relation"
 	"wgxDouYin/grpc/user"
-	rabbitmq "wgxDouYin/pkg/rabbitMQ"
 )
 
 type RelationServiceImpl struct {
@@ -19,6 +17,12 @@ type RelationServiceImpl struct {
 
 // RelationAction 关注以及取关操作
 func (s *RelationServiceImpl) RelationAction(ctx context.Context, req *relation.RelationActionRequest) (resp *relation.RelationActionResponse, err error) {
+	//token既然已经针对该ID进行签发，则tokenUserId一定存在，无需验证；只需验证被操作方是否存在
+	//过程：
+	//1.插入MySQL，发送消息到消息队列给Redis消费关系信息；
+	//2.消费关系信息，然后利用redis查询被操作方是否为热点用户，如果是更新其热点用户排行榜的信息
+	//3.如果不是，则更新其Redis中的最近24小时关注量，再判断该关注量是否超过热点用户阈值，如果超过则加入热点用户排行榜
+	//4.定时任务对照补偿，修正因为发送队列失败造成的部分数据错误，查询热点用户是否有遗漏
 	if req.TokenUserId == req.ToUserId {
 		logger.Errorf("操作非法：用户无法成为自己的粉丝：%d", req.TokenUserId)
 		res := &relation.RelationActionResponse{
@@ -27,65 +31,62 @@ func (s *RelationServiceImpl) RelationAction(ctx context.Context, req *relation.
 		}
 		return res, nil
 	}
-	u1, _ := db.GetUserByID(ctx, req.TokenUserId)
-	u2, _ := db.GetUserByID(ctx, req.ToUserId)
-	if u1 == nil || u2 == nil {
-		logger.Errorln("所请求的用户ID不存在")
+	toUser, err := db.GetUserByID(ctx, req.ToUserId)
+	if toUser == nil {
+		logger.Errorln("请求指向的用户ID不存在")
 		res := &relation.RelationActionResponse{
 			StatusCode: -1,
-			StatusMsg:  "所请求的用户ID不存在",
+			StatusMsg:  "请求指向的用户ID不存在",
 		}
 		return res, nil
 	}
-	relationCache := &wgxRedis.RelationCache{
-		UserID:     req.TokenUserId,
-		ToUserID:   req.ToUserId,
-		ActionType: req.ActionType,
-		CreatedAt:  uint64(time.Now().UnixMilli()),
-	}
-	jsonRc, err := json.Marshal(relationCache)
-	if err != nil {
-		logger.Errorln("序列化Relation失败")
-		res := &relation.RelationActionResponse{
-			StatusCode: -1,
-			StatusMsg:  "内部错误",
-		}
-		return res, nil
-	}
-	if err = RelationMQ.PublishSimple(ctx, jsonRc); err != nil {
-		logger.Errorf("消息队列发布错误：%v", err.Error())
-		if strings.Contains(err.Error(), "连接断开") {
-			go func() {
-				err := RelationMQ.Destroy()
-				if err != nil {
-					logger.Errorln(err)
-				}
-			}()
-			RelationMQ, err = rabbitmq.DefaultRabbitMQInstance("relation")
-			if err != nil {
-				logger.Errorf(err.Error())
-			}
-			go func() {
-				err := consume()
-				if err != nil {
-					logger.Errorf(err.Error())
-				}
-			}()
+	relationActionRecord := db.FollowRelation{UserID: req.TokenUserId, ToUserID: req.ToUserId}
+	switch req.ActionType {
+	case relation.RelationActionType_FOLLOW:
+		if err := db.CreateRelation(ctx, &relationActionRecord); err != nil {
 			res := &relation.RelationActionResponse{
-				StatusCode: 0,
-				StatusMsg:  "success",
+				StatusCode: -1,
+				StatusMsg:  err.Error(),
 			}
 			return res, nil
 		}
+	case relation.RelationActionType_UN_FOLLOW:
+		if err := db.DelRelationByUserID(ctx, &relationActionRecord); err != nil {
+			res := &relation.RelationActionResponse{
+				StatusCode: -1,
+				StatusMsg:  err.Error(),
+			}
+			return res, nil
+		}
+	case relation.RelationActionType_WRONG_TYPE:
 		res := &relation.RelationActionResponse{
 			StatusCode: -1,
-			StatusMsg:  "服务器内部错误：操作失败",
+			StatusMsg:  "错误的用户操作类型",
 		}
 		return res, nil
 	}
 	res := &relation.RelationActionResponse{
 		StatusCode: 0,
 		StatusMsg:  "success",
+	}
+	if time.Now().Sub(relationActionRecord.CreatedAt) >= 24*time.Hour {
+		return res, nil
+	} else {
+		relationCache := &wgxRedis.RelationCache{
+			UserID:     req.TokenUserId,
+			ToUserID:   req.ToUserId,
+			ActionType: req.ActionType,
+			CreatedAt:  relationActionRecord.CreatedAt,
+		}
+		relationCacheByte, err := json.Marshal(relationCache)
+		if err != nil {
+			logger.Errorln(err)
+			return res, nil
+		}
+		if err := RelationMQ.PublishSimple(ctx, relationCacheByte); err != nil {
+			logger.Errorln(err)
+			return res, nil
+		}
 	}
 	return res, nil
 }

@@ -25,7 +25,7 @@ func ErrorDatabase() error {
 	return errors.New("Error Database")
 }
 
-func CreateVideoFavorite(ctx context.Context, userId uint64, videoId uint64, actionType favorite.VideoActionType) error {
+func CreateVideoAction(ctx context.Context, userId uint64, videoId uint64, actionType favorite.VideoActionType) error {
 	err := GetDB().Clauses(dbresolver.Write).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err := tx.Create(&FavoriteVideoRelation{UserID: userId, VideoID: videoId, ActionType: actionType}).Error
 		if err != nil {

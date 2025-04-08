@@ -4,15 +4,16 @@ import (
 	"context"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"gorm.io/plugin/dbresolver"
 )
 
 type FollowRelation struct {
 	gorm.Model
-	User     User `gorm:"foreignkey:UserID;" json:"user,omitempty"`
-	UserID   uint `gorm:"index:idx_userid;not null" json:"user_id"`
-	ToUser   User `gorm:"foreignkey:ToUserID;" json:"to_user,omitempty"`
-	ToUserID uint `gorm:"index:idx_userid;index:idx_userid_to;not null" json:"to_user_id"`
+	User     User   `gorm:"foreignkey:UserID;" json:"user,omitempty"`
+	UserID   uint64 `gorm:"index:idx_userid;not null" json:"user_id"`
+	ToUser   User   `gorm:"foreignkey:ToUserID;" json:"to_user,omitempty"`
+	ToUserID uint64 `gorm:"index:idx_userid;index:idx_userid_to;not null" json:"to_user_id"`
 }
 
 func (FollowRelation) TableName() string {
@@ -30,62 +31,67 @@ func GetRelationByUserIDs(ctx context.Context, userId uint64, toUserID uint64) (
 	}
 }
 
-func CreateRelation(ctx context.Context, userID uint64, toUserID uint64) error {
+func CreateRelation(ctx context.Context, followRelation *FollowRelation) error {
 	err := GetDB().Clauses(dbresolver.Write).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := tx.Create(&FollowRelation{UserID: uint(userID), ToUserID: uint(toUserID)}).Error
-		if err != nil {
-			return err
+		createRes := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "user_id"}, {Name: "to_user_id"}},
+			DoNothing: true,
+		}).Create(followRelation)
+		if createRes.RowsAffected == 0 {
+			return errors.New("重复关注")
 		}
-		res := tx.Model(&User{}).Where("id = ?", userID).
+		if createRes.Error != nil {
+			return createRes.Error
+		}
+		res := tx.Model(&User{}).Where("id = ?", followRelation.UserID).
 			Update("following_count",
 				gorm.Expr("following_count + ?", 1))
 		if res.Error != nil {
 			return res.Error
 		}
 		if res.RowsAffected != 1 {
-			return NewDatabaseErrorMessage(userID, "CreateRelation", Update)
+			return NewDatabaseErrorMessage(followRelation.UserID, "CreateRelation", Update)
 		}
-		res = tx.Model(&User{}).Where("id = ?", toUserID).
+		res = tx.Model(&User{}).Where("id = ?", followRelation.ToUserID).
 			Update("follower_count",
 				gorm.Expr("follower_count + ?", 1))
 		if res.Error != nil {
 			return res.Error
 		}
 		if res.RowsAffected != 1 {
-			return NewDatabaseErrorMessage(toUserID, "CreateRelation", Update)
+			return NewDatabaseErrorMessage(followRelation.ToUserID, "CreateRelation", Update)
 		}
 		return nil
 	})
 	return err
 }
 
-func DelRelationByUserID(ctx context.Context, userID uint64, toUserID uint64) error {
+func DelRelationByUserID(ctx context.Context, followRelation *FollowRelation) error {
 	err := GetDB().Clauses(dbresolver.Write).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		relation := new(FollowRelation)
-		if err := tx.Where("user_id = ? AND to_user_id=?", userID, toUserID).First(&relation).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil
+		if record := tx.Where("user_id = ? AND to_user_id=?",
+			followRelation.UserID, followRelation.ToUserID).First(followRelation); record.Error != nil {
+			if errors.Is(record.Error, gorm.ErrRecordNotFound) {
+				return errors.New("不能取关你未关注的人")
 			}
-			return err
+			return record.Error
 		}
-
-		err := tx.Unscoped().Delete(&relation).Error
+		err := tx.Unscoped().Delete(followRelation).Error
 		if err != nil {
 			return err
 		}
-		res := tx.Model(&User{}).Where("id = ?", userID).Update("following_count", gorm.Expr("following_count - ?", 1))
+		res := tx.Model(&User{}).Where("id = ?", followRelation.UserID).Update("following_count", gorm.Expr("following_count - ?", 1))
 		if res.Error != nil {
 			return res.Error
 		}
 		if res.RowsAffected != 1 {
-			return NewDatabaseErrorMessage(userID, "DelRelationByUserIDs", Delete)
+			return NewDatabaseErrorMessage(followRelation.UserID, "DelRelationByUserIDs", Delete)
 		}
-		res = tx.Model(&User{}).Where("id = ?", toUserID).Update("follower_count", gorm.Expr("follower_count - ?", 1))
+		res = tx.Model(&User{}).Where("id = ?", followRelation.ToUserID).Update("follower_count", gorm.Expr("follower_count - ?", 1))
 		if res.Error != nil {
 			return res.Error
 		}
 		if res.RowsAffected != 1 {
-			return NewDatabaseErrorMessage(toUserID, "DelRelationByUserIDs", Delete)
+			return NewDatabaseErrorMessage(followRelation.ToUserID, "DelRelationByUserIDs", Delete)
 		}
 		return nil
 	})
