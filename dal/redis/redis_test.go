@@ -71,18 +71,18 @@ func TestRelationMoveToDB(t *testing.T) {
 
 func TestGetSet(t *testing.T) {
 	key := fmt.Sprintf("following::%d", 1)
-	sets, err := getSet(context.Background(), key)
+	sets, err := GetSet(context.Background(), key)
 	if err != nil {
-		t.Fatalf("getSet err: %v", err)
+		t.Fatalf("GetSet err: %v", err)
 	}
 	fmt.Println(sets)
 }
 
 func TestSetCount(t *testing.T) {
 	key := fmt.Sprintf("follower::3")
-	count, err := getSetCount(context.Background(), key)
+	count, err := GetSetCount(context.Background(), key)
 	if err != nil {
-		t.Fatalf("getSet err: %v", err)
+		t.Fatalf("GetSet err: %v", err)
 	}
 	fmt.Println(count)
 }
@@ -90,7 +90,7 @@ func TestSetCount(t *testing.T) {
 func TestIntersection(t *testing.T) {
 	followingKey := fmt.Sprintf("following::%d", 1)
 	followerKey := fmt.Sprintf("follower::%d", 1)
-	res, err := getSetIntersection(context.Background(), followingKey, followerKey)
+	res, err := GetSetIntersection(context.Background(), followingKey, followerKey)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -101,7 +101,7 @@ func TestIntersection(t *testing.T) {
 func TestExpire(t *testing.T) {
 	expireTime := time.Now().Add(5 * time.Second)
 	ctx := context.Background()
-	err := setKeyValue(ctx, "my_key", "my_value", expireTime, RelationMutex)
+	err := SetKeyValue(ctx, "my_key", "my_value", expireTime, RelationMutex)
 	if err != nil {
 		t.Fatalf("Error receiving message: %v", err)
 		return
@@ -110,4 +110,14 @@ func TestExpire(t *testing.T) {
 
 	}()
 	time.Sleep(10 * time.Second)
+}
+
+func TestIncrZSet(t *testing.T) {
+	ctx := context.Background()
+	videoRankName := ""
+	videoId := "4"
+	err := IncrNumInZSet(ctx, videoRankName, videoId, -1, FavoriteMutex)
+	if err != nil {
+		t.Fatalf("Error receiving message: %v", err)
+	}
 }

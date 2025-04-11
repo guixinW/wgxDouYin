@@ -35,12 +35,6 @@ func FavoriteAction(c *gin.Context) {
 		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Errorf("操作类型不合法").Error()))
 		return
 	}
-	c.JSON(http.StatusOK, response.FavoriteAction{
-		Base: response.Base{
-			StatusCode: 0,
-			StatusMsg:  "test",
-		},
-	})
 	req := &favoriteGrpc.FavoriteActionRequest{
 		TokenUserId: tokenUserId.(uint64),
 		VideoId:     videoId,

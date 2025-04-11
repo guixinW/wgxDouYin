@@ -12,7 +12,7 @@ import (
 	"wgxDouYin/pkg/zap"
 )
 
-const ExpireTime = 5 * time.Second
+const ExpireTime = 24 * time.Hour
 
 var (
 	config        = viper.Init("db")
@@ -72,5 +72,4 @@ func init() {
 	rs := redsync.New(pool)
 	FavoriteMutex = rs.NewMutex("mutex-favorite")
 	RelationMutex = rs.NewMutex("mutex-relation")
-	go ListenExpireRelation()
 }

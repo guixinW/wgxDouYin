@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -37,12 +38,22 @@ func CreateRelation(ctx context.Context, followRelation *FollowRelation) error {
 			Columns:   []clause.Column{{Name: "user_id"}, {Name: "to_user_id"}},
 			DoNothing: true,
 		}).Create(followRelation)
+
+		//判断是否出现错误以及是否未正常插入
+		if createRes.Error != nil {
+			var mysqlErr *mysql.MySQLError
+			if errors.As(createRes.Error, &mysqlErr) {
+				if mysqlErr.Number == 1452 {
+					return errors.New("关注的用户不存在")
+				}
+			}
+			return createRes.Error
+		}
 		if createRes.RowsAffected == 0 {
 			return errors.New("重复关注")
 		}
-		if createRes.Error != nil {
-			return createRes.Error
-		}
+
+		//更改被关注人的follower_count以及关注人的following_count
 		res := tx.Model(&User{}).Where("id = ?", followRelation.UserID).
 			Update("following_count",
 				gorm.Expr("following_count + ?", 1))
@@ -68,8 +79,7 @@ func CreateRelation(ctx context.Context, followRelation *FollowRelation) error {
 
 func DelRelationByUserID(ctx context.Context, followRelation *FollowRelation) error {
 	err := GetDB().Clauses(dbresolver.Write).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if record := tx.Where("user_id = ? AND to_user_id=?",
-			followRelation.UserID, followRelation.ToUserID).First(followRelation); record.Error != nil {
+		if record := tx.Where("user_id = ? AND to_user_id=?", followRelation.UserID, followRelation.ToUserID).First(followRelation); record.Error != nil {
 			if errors.Is(record.Error, gorm.ErrRecordNotFound) {
 				return errors.New("不能取关你未关注的人")
 			}

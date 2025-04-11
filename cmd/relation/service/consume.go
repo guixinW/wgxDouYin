@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	wgxRedis "wgxDouYin/dal/redis"
+	relationDao "wgxDouYin/cmd/relation/redisDAO"
 	rabbitmq "wgxDouYin/pkg/rabbitMQ"
 )
 
@@ -15,14 +15,14 @@ func consume() error {
 		return err
 	}
 	for msg := range messages {
-		rc := new(wgxRedis.RelationCache)
+		rc := new(relationDao.RelationCache)
 		if err = json.Unmarshal(msg.Body, &rc); err != nil {
 			fmt.Println("json unmarshal error:" + err.Error())
 			logger.Errorf("RelationMQ Err: %s", err.Error())
 			continue
 		}
 		fmt.Printf("==> Get new message: %v\n", rc)
-		if err = wgxRedis.UpdateRelation(context.Background(), rc); err != nil {
+		if err = relationDao.UpdateRelation(context.Background(), rc); err != nil {
 			fmt.Println("add to redis error:" + err.Error())
 			logger.Errorf("RelationMQ Err: %s", err.Error())
 			continue

@@ -10,12 +10,12 @@ import (
 var (
 	KeyManager *keys.KeyManager
 	logger     = zap.InitLogger()
-	RelationMQ *rabbitmq.RabbitMQ
+	FavoriteMQ *rabbitmq.RabbitMQ
 )
 
 func init() {
 	var err error
-	RelationMQ, err = rabbitmq.DefaultRabbitMQInstance("favorite")
+	FavoriteMQ, err = rabbitmq.DefaultRabbitMQInstance("favorite")
 	if err != nil {
 		panic(err)
 	}

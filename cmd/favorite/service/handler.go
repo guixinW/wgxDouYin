@@ -3,11 +3,10 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"time"
-	wgxRedis "wgxDouYin/dal/redis"
+	redisDAO "wgxDouYin/cmd/favorite/redisDAO"
+	"wgxDouYin/dal/db"
 	"wgxDouYin/grpc/favorite"
-	rabbitmq "wgxDouYin/pkg/rabbitMQ"
 )
 
 type FavoriteServiceImpl struct {
@@ -17,63 +16,82 @@ type FavoriteServiceImpl struct {
 const limit = 30
 
 func (s *FavoriteServiceImpl) FavoriteAction(ctx context.Context, req *favorite.FavoriteActionRequest) (*favorite.FavoriteActionResponse, error) {
-	if req.TokenUserId == 0 {
-		logger.Errorf("操作非法：无法鉴别用户身份")
+	if req.TokenUserId == 0 || req.VideoId <= 0 {
+		logger.Errorf("操作非法")
 		res := &favorite.FavoriteActionResponse{
 			StatusCode: -1,
-			StatusMsg:  "操作非法：请登陆",
+			StatusMsg:  "操作非法",
 		}
 		return res, nil
 	}
-	favoriteMessage := &wgxRedis.FavoriteCache{
-		VideoID:    req.VideoId,
-		UserID:     req.TokenUserId,
-		ActionType: req.ActionType,
-		CreatedAt:  time.Now(),
-	}
-	jsonRc, err := json.Marshal(favoriteMessage)
-	if err != nil {
-		logger.Errorln("序列化Relation失败")
-		res := &favorite.FavoriteActionResponse{
-			StatusCode: -1,
-			StatusMsg:  "内部错误",
-		}
-		return res, nil
-	}
-	if err = RelationMQ.PublishSimple(ctx, jsonRc); err != nil {
-		logger.Errorf("消息队列发布错误：%v", err.Error())
-		if strings.Contains(err.Error(), "连接断开") {
-			go func() {
-				err := RelationMQ.Destroy()
-				if err != nil {
-					logger.Errorln(err)
-				}
-			}()
-			RelationMQ, err = rabbitmq.DefaultRabbitMQInstance("favorite")
-			if err != nil {
-				logger.Errorf(err.Error())
-			}
-			go func() {
-				err := consume()
-				if err != nil {
-					logger.Errorf(err.Error())
-				}
-			}()
+	videoActionRecord := db.FavoriteVideoRelation{VideoID: req.VideoId, UserID: req.TokenUserId, ActionType: req.ActionType}
+	switch req.ActionType {
+	case favorite.VideoActionType_LIKE:
+		if err := db.CreateVideoRelation(ctx, &videoActionRecord); err != nil {
 			res := &favorite.FavoriteActionResponse{
-				StatusCode: 0,
-				StatusMsg:  "success",
+				StatusCode: -1,
+				StatusMsg:  err.Error(),
 			}
 			return res, nil
 		}
+	case favorite.VideoActionType_DISLIKE:
+		if err := db.CreateVideoRelation(ctx, &videoActionRecord); err != nil {
+			res := &favorite.FavoriteActionResponse{
+				StatusCode: -1,
+				StatusMsg:  err.Error(),
+			}
+			return res, nil
+		}
+	case favorite.VideoActionType_CANCEL_LIKE:
+		if err := db.DelVideoRelation(ctx, &videoActionRecord); err != nil {
+			res := &favorite.FavoriteActionResponse{
+				StatusCode: -1,
+				StatusMsg:  err.Error(),
+			}
+			return res, nil
+		}
+	case favorite.VideoActionType_CANCEL_DISLIKE:
+		if err := db.DelVideoRelation(ctx, &videoActionRecord); err != nil {
+			res := &favorite.FavoriteActionResponse{
+				StatusCode: -1,
+				StatusMsg:  err.Error(),
+			}
+			return res, nil
+		}
+	case favorite.VideoActionType_WRONG_TYPE:
 		res := &favorite.FavoriteActionResponse{
 			StatusCode: -1,
-			StatusMsg:  "服务器内部错误：操作失败",
+			StatusMsg:  "错误的用户操作类型",
 		}
 		return res, nil
 	}
 	res := &favorite.FavoriteActionResponse{
 		StatusCode: 0,
 		StatusMsg:  "success",
+	}
+	if time.Now().Sub(videoActionRecord.CreatedAt) >= 24*time.Hour {
+		return res, nil
+	}
+	var latestVideoActionTime time.Time
+	if videoActionRecord.CreatedAt.Before(videoActionRecord.UpdatedAt) {
+		latestVideoActionTime = videoActionRecord.UpdatedAt
+	} else {
+		latestVideoActionTime = videoActionRecord.CreatedAt
+	}
+	favoriteCache := &redisDAO.FavoriteCache{
+		VideoID:    req.VideoId,
+		UserID:     req.TokenUserId,
+		CreatedAt:  latestVideoActionTime,
+		ActionType: req.ActionType,
+	}
+	favoriteCacheByte, err := json.Marshal(favoriteCache)
+	if err != nil {
+		logger.Errorln(err)
+		return res, nil
+	}
+	if err := FavoriteMQ.PublishSimple(ctx, favoriteCacheByte); err != nil {
+		logger.Errorln(err)
+		return res, nil
 	}
 	return res, nil
 }

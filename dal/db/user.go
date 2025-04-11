@@ -16,6 +16,7 @@ type User struct {
 	FollowerCount  uint64  `gorm:"default:0;not null" json:"follower_count,omitempty"`
 	WorkCount      uint64  `gorm:"default:0;not null" json:"work_count,omitempty"`
 	FavoriteCount  uint64  `gorm:"default:0;not null" json:"favorite_count,omitempty"`
+	DislikeCount   uint64  `gorm:"default:0;not null" json:"dislike_count,omitempty"`
 }
 
 func (User) TableName() string {

@@ -14,6 +14,7 @@ type Video struct {
 	AuthorID      uint64 `gorm:"index:idx_authorid;not null" json:"author_id,omitempty"`
 	PlayUrl       string `gorm:"type:varchar(255);not null" json:"play_url,omitempty"`
 	FavoriteCount uint64 `gorm:"default:0;not null" json:"favorite_count,omitempty"`
+	DislikeCount  uint64 `gorm:"default:0;not null" json:"dislike_count,omitempty"`
 	CommentCount  uint64 `gorm:"default:0;not null" json:"comment_count,omitempty"`
 	Title         string `gorm:"type:varchar(50);not null" json:"title,omitempty"`
 }

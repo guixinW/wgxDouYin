@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+	redisDAO "wgxDouYin/cmd/relation/redisDAO"
 	"wgxDouYin/dal/db"
-	wgxRedis "wgxDouYin/dal/redis"
 	relation "wgxDouYin/grpc/relation"
 	"wgxDouYin/grpc/user"
 )
@@ -28,15 +28,6 @@ func (s *RelationServiceImpl) RelationAction(ctx context.Context, req *relation.
 		res := &relation.RelationActionResponse{
 			StatusCode: -1,
 			StatusMsg:  "操作非法：用户无法成为自己的粉丝",
-		}
-		return res, nil
-	}
-	toUser, err := db.GetUserByID(ctx, req.ToUserId)
-	if toUser == nil {
-		logger.Errorln("请求指向的用户ID不存在")
-		res := &relation.RelationActionResponse{
-			StatusCode: -1,
-			StatusMsg:  "请求指向的用户ID不存在",
 		}
 		return res, nil
 	}
@@ -71,22 +62,21 @@ func (s *RelationServiceImpl) RelationAction(ctx context.Context, req *relation.
 	}
 	if time.Now().Sub(relationActionRecord.CreatedAt) >= 24*time.Hour {
 		return res, nil
-	} else {
-		relationCache := &wgxRedis.RelationCache{
-			UserID:     req.TokenUserId,
-			ToUserID:   req.ToUserId,
-			ActionType: req.ActionType,
-			CreatedAt:  relationActionRecord.CreatedAt,
-		}
-		relationCacheByte, err := json.Marshal(relationCache)
-		if err != nil {
-			logger.Errorln(err)
-			return res, nil
-		}
-		if err := RelationMQ.PublishSimple(ctx, relationCacheByte); err != nil {
-			logger.Errorln(err)
-			return res, nil
-		}
+	}
+	relationCache := &redisDAO.RelationCache{
+		UserID:     req.TokenUserId,
+		ToUserID:   req.ToUserId,
+		ActionType: req.ActionType,
+		CreatedAt:  relationActionRecord.CreatedAt,
+	}
+	relationCacheByte, err := json.Marshal(relationCache)
+	if err != nil {
+		logger.Errorln(err)
+		return res, nil
+	}
+	if err := RelationMQ.PublishSimple(ctx, relationCacheByte); err != nil {
+		logger.Errorln(err)
+		return res, nil
 	}
 	return res, nil
 }
@@ -101,7 +91,7 @@ func (s *RelationServiceImpl) RelationFollowList(ctx context.Context, req *relat
 		}
 		return res, nil
 	}
-	userIds, err := wgxRedis.GetFollowingIDs(ctx, req.UserId)
+	userIds, err := redisDAO.GetFollowingIDs(ctx, req.UserId)
 	if err != nil {
 		logger.Errorf("用户%v获取关注者列表失败", req.UserId)
 		res := &relation.RelationFollowListResponse{
@@ -112,8 +102,8 @@ func (s *RelationServiceImpl) RelationFollowList(ctx context.Context, req *relat
 	}
 	userList := make([]*user.User, 0, len(userIds))
 	for _, userId := range userIds {
-		userFollowerCount, followerErr := wgxRedis.GetFollowerCount(ctx, userId)
-		userFollowingCount, followingErr := wgxRedis.GetFollowingCount(ctx, userId)
+		userFollowerCount, followerErr := redisDAO.GetFollowerCount(ctx, userId)
+		userFollowingCount, followingErr := redisDAO.GetFollowingCount(ctx, userId)
 		if followingErr != nil || followerErr != nil {
 			res := &relation.RelationFollowListResponse{
 				StatusCode: -1,
@@ -145,7 +135,7 @@ func (s *RelationServiceImpl) RelationFollowerList(ctx context.Context, req *rel
 		}
 		return res, nil
 	}
-	userIds, err := wgxRedis.GetFollowerIDs(ctx, req.UserId)
+	userIds, err := redisDAO.GetFollowerIDs(ctx, req.UserId)
 	if err != nil {
 		logger.Errorf("用户%v获取关注者列表失败", req.UserId)
 		res := &relation.RelationFollowerListResponse{
@@ -156,8 +146,8 @@ func (s *RelationServiceImpl) RelationFollowerList(ctx context.Context, req *rel
 	}
 	userList := make([]*user.User, 0, len(userIds))
 	for _, userId := range userIds {
-		userFollowerCount, followerErr := wgxRedis.GetFollowerCount(ctx, userId)
-		userFollowingCount, followingErr := wgxRedis.GetFollowingCount(ctx, userId)
+		userFollowerCount, followerErr := redisDAO.GetFollowerCount(ctx, userId)
+		userFollowingCount, followingErr := redisDAO.GetFollowingCount(ctx, userId)
 		if followingErr != nil || followerErr != nil {
 			res := &relation.RelationFollowerListResponse{
 				StatusCode: -1,
@@ -189,7 +179,7 @@ func (s *RelationServiceImpl) RelationFriendList(ctx context.Context, req *relat
 		}
 		return res, nil
 	}
-	friendIds, err := wgxRedis.GetFriends(ctx, req.UserId)
+	friendIds, err := redisDAO.GetFriends(ctx, req.UserId)
 	if err != nil {
 		logger.Errorf("用户%v获取关注者列表失败", req.UserId)
 		res := &relation.RelationFriendListResponse{
@@ -201,8 +191,8 @@ func (s *RelationServiceImpl) RelationFriendList(ctx context.Context, req *relat
 	fmt.Println(friendIds)
 	friendList := make([]*relation.FriendUser, 0, len(friendIds))
 	for _, friendId := range friendIds {
-		friendFollowerCount, followerErr := wgxRedis.GetFollowerCount(ctx, friendId)
-		friendFollowingCount, followingErr := wgxRedis.GetFollowingCount(ctx, friendId)
+		friendFollowerCount, followerErr := redisDAO.GetFollowerCount(ctx, friendId)
+		friendFollowingCount, followingErr := redisDAO.GetFollowingCount(ctx, friendId)
 		if followingErr != nil || followerErr != nil {
 			res := &relation.RelationFriendListResponse{
 				StatusCode: -1,

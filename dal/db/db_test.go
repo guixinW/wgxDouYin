@@ -6,42 +6,18 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/plugin/dbresolver"
-	"sync"
 	"testing"
+	"time"
+	"wgxDouYin/grpc/favorite"
 )
 
 func TestCreateRelation(t *testing.T) {
-	insertFollowRelation := FollowRelation{UserID: 1, ToUserID: 2}
+	insertFollowRelation := FollowRelation{UserID: 1, ToUserID: 100}
 	err := CreateRelation(context.Background(), &insertFollowRelation)
 	if err != nil {
 		t.Fatalf("CreateRelation err: %v", err)
 	}
 	fmt.Println(insertFollowRelation.CreatedAt)
-}
-
-func TestTestTabeleWriteAfterRead(t *testing.T) {
-	test := Test{Id: 3, Category: "1", Name: "ok"}
-	var ans []Test
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		err := CreateTest(context.Background(), &test)
-		if err != nil {
-			t.Errorf(err.Error())
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		ans, _ = ReadTest(context.Background())
-	}()
-	wg.Wait()
-	fmt.Println(ans)
-}
-
-func TestTestTableRead(t *testing.T) {
-	ans, _ := ReadTest(context.Background())
-	fmt.Println(ans)
 }
 
 func TestMySQLTransaction(t *testing.T) {
@@ -71,5 +47,43 @@ func TestMySQLTransaction(t *testing.T) {
 	fmt.Println(sum)
 	if err != nil {
 		t.Fatalf(err.Error())
+	}
+}
+
+func TestFavoriteAction(t *testing.T) {
+	ctx := context.Background()
+	var userId uint64
+	var videoId uint64
+	userId = 5
+	videoId = 4
+	originUser, _ := GetUserByID(ctx, userId)
+	newVideoRelation := FavoriteVideoRelation{VideoID: videoId, UserID: userId, ActionType: favorite.VideoActionType_LIKE}
+	err := CreateVideoRelation(ctx, &newVideoRelation)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	time.Sleep(1 * time.Second)
+	afterActionUser, _ := GetUserByID(ctx, userId)
+	if originUser.FavoriteCount != afterActionUser.FavoriteCount-1 {
+		t.Fatalf("video action 操作失败, originUser:%v, afterActionUser:%v\n", originUser.FavoriteCount, afterActionUser.FavoriteCount)
+	}
+}
+
+func TestDislikeAction(t *testing.T) {
+	ctx := context.Background()
+	var userId uint64
+	var videoId uint64
+	userId = 5
+	videoId = 4
+	originUser, _ := GetUserByID(ctx, userId)
+	newVideoRelation := FavoriteVideoRelation{VideoID: videoId, UserID: userId, ActionType: favorite.VideoActionType_DISLIKE}
+	err := CreateVideoRelation(ctx, &newVideoRelation)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	time.Sleep(1 * time.Second)
+	afterActionUser, _ := GetUserByID(ctx, userId)
+	if originUser.DislikeCount != afterActionUser.DislikeCount-1 {
+		t.Fatalf("video action 操作失败, originUser:%v, afterActionUser:%v\n", originUser.DislikeCount, afterActionUser.DislikeCount)
 	}
 }
