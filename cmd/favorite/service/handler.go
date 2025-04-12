@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"time"
-	redisDAO "wgxDouYin/cmd/favorite/redisDAO"
+	"wgxDouYin/cmd/favorite/redisDAO"
 	"wgxDouYin/dal/db"
 	"wgxDouYin/grpc/favorite"
 )
@@ -16,7 +16,7 @@ type FavoriteServiceImpl struct {
 const limit = 30
 
 func (s *FavoriteServiceImpl) FavoriteAction(ctx context.Context, req *favorite.FavoriteActionRequest) (*favorite.FavoriteActionResponse, error) {
-	if req.TokenUserId == 0 || req.VideoId <= 0 {
+	if req.TokenUserId <= 0 || req.VideoId <= 0 {
 		logger.Errorf("操作非法")
 		res := &favorite.FavoriteActionResponse{
 			StatusCode: -1,

@@ -9,6 +9,7 @@ import (
 	"time"
 	wgxRedis "wgxDouYin/dal/redis"
 	"wgxDouYin/grpc/relation"
+	"wgxDouYin/internal/tool"
 )
 
 type RelationCache struct {
@@ -19,16 +20,6 @@ type RelationCache struct {
 }
 
 const followerRankName = "follower_rank"
-
-func StrToRelationActionType(str string) relation.RelationActionType {
-	if str == "0" {
-		return relation.RelationActionType_FOLLOW
-	} else if str == "1" {
-		return relation.RelationActionType_UN_FOLLOW
-	} else {
-		return relation.RelationActionType_WRONG_TYPE
-	}
-}
 
 func UpdateRelation(ctx context.Context, relationCache *RelationCache) error {
 	keyRelation := fmt.Sprintf("user::%d::to_user::%d", relationCache.UserID, relationCache.ToUserID)
@@ -93,7 +84,7 @@ func UpdateRelation(ctx context.Context, relationCache *RelationCache) error {
 		if err != nil {
 			return wgxRedis.ErrorWrap(err, "UpdateFavorite relation redis time error")
 		}
-		existRelationActionType := StrToRelationActionType(existRelationValueSplit[1])
+		existRelationActionType := tool.StrToRelationActionType(existRelationValueSplit[1])
 		if existRelationActionType == relationCache.ActionType {
 			return nil
 		}

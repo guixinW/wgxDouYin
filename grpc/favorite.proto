@@ -3,6 +3,7 @@ option go_package = "./favorite";
 package favorite;
 import "video.proto";
 
+//  ================视频点赞、踩操作========================
 enum VideoActionType {
   // 点赞
   LIKE = 0;

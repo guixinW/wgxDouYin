@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="favorite" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="douyin" />
+    <working_directory value="$PROJECT_DIR$/cmd/favorite" />
+    <kind value="PACKAGE" />
+    <package value="wgxDouYin/cmd/favorite" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/favorite/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

@@ -8,6 +8,7 @@ import (
 	"time"
 	wgxRedis "wgxDouYin/dal/redis"
 	"wgxDouYin/grpc/favorite"
+	"wgxDouYin/internal/tool"
 )
 
 type FavoriteCache struct {
@@ -18,19 +19,6 @@ type FavoriteCache struct {
 }
 
 const videoRankName = "video_rank"
-
-func StrToVideoActionType(str string) favorite.VideoActionType {
-	if str == "0" {
-		return favorite.VideoActionType_LIKE
-	} else if str == "1" {
-		return favorite.VideoActionType_DISLIKE
-	} else if str == "2" {
-		return favorite.VideoActionType_CANCEL_LIKE
-	} else if str == "3" {
-		return favorite.VideoActionType_CANCEL_DISLIKE
-	}
-	return favorite.VideoActionType_WRONG_TYPE
-}
 
 func UpdateFavorite(ctx context.Context, favoriteCache *FavoriteCache) error {
 	keyFavorite := fmt.Sprintf("video::%d::user::%d", favoriteCache.VideoID, favoriteCache.UserID)
@@ -83,7 +71,7 @@ func UpdateFavorite(ctx context.Context, favoriteCache *FavoriteCache) error {
 			return wgxRedis.ErrorWrap(err, "UpdateFavorite get key error")
 		}
 		existFavoriteValueSplit := strings.Split(existFavoriteValue, "::")
-		existFavoriteActionType := StrToVideoActionType(existFavoriteValueSplit[1])
+		existFavoriteActionType := tool.StrToVideoActionType(existFavoriteValueSplit[1])
 		fmt.Println(existFavoriteActionType, favoriteCache.ActionType)
 		if existFavoriteActionType == favoriteCache.ActionType {
 			return nil

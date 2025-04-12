@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"net/http"
 	_ "net/http/pprof" // 注册 pprof 的 handler
 	"wgxDouYin/cmd/api/handler"
 	"wgxDouYin/cmd/api/rpc"
@@ -68,17 +67,22 @@ func InitRouter() *gin.Engine {
 			favorite.POST("/action/", handler.FavoriteAction)
 			favorite.POST("/list/", handler.FavoriteList)
 		}
+		comment := wgxDouYin.Group("/comment")
+		{
+			comment.POST("/action/", handler.CommentAction)
+			comment.GET("/list/", handler.CommentList)
+		}
 	}
 	return router
 }
 
 func main() {
-	go func() {
-		fmt.Println("pprof 监听在 http://localhost:6060/debug/pprof/")
-		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
-			panic("pprof 启动失败: " + err.Error())
-		}
-	}()
+	//go func() {
+	//	fmt.Println("pprof 监听在 http://localhost:6060/debug/pprof/")
+	//	if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+	//		panic("pprof 启动失败: " + err.Error())
+	//	}
+	//}()
 	r := InitRouter()
 	if err := r.Run(apiServerAddr); err != nil {
 		panic(err)

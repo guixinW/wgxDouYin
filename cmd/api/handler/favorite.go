@@ -8,6 +8,7 @@ import (
 	"wgxDouYin/cmd/api/rpc"
 	favoriteGrpc "wgxDouYin/grpc/favorite"
 	"wgxDouYin/internal/response"
+	"wgxDouYin/internal/tool"
 )
 
 func FavoriteAction(c *gin.Context) {
@@ -21,18 +22,10 @@ func FavoriteAction(c *gin.Context) {
 		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Errorf("解析video_id失败").Error()))
 		return
 	}
-	var actionType favoriteGrpc.VideoActionType
-	postActionType := c.PostForm("video_action_type")
-	if postActionType == "0" {
-		actionType = favoriteGrpc.VideoActionType_LIKE
-	} else if postActionType == "1" {
-		actionType = favoriteGrpc.VideoActionType_DISLIKE
-	} else if postActionType == "2" {
-		actionType = favoriteGrpc.VideoActionType_CANCEL_LIKE
-	} else if postActionType == "3" {
-		actionType = favoriteGrpc.VideoActionType_CANCEL_DISLIKE
-	} else {
-		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Errorf("操作类型不合法").Error()))
+	postFormActionType := c.PostForm("video_action_type")
+	actionType := tool.StrToVideoActionType(postFormActionType)
+	if actionType == favoriteGrpc.VideoActionType_WRONG_TYPE {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Errorf("操作类型%v不合法", postFormActionType).Error()))
 		return
 	}
 	req := &favoriteGrpc.FavoriteActionRequest{

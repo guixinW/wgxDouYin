@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/resolver"
+	"wgxDouYin/grpc/comment"
 	"wgxDouYin/grpc/favorite"
 	"wgxDouYin/grpc/relation"
 	"wgxDouYin/grpc/user"
@@ -35,10 +36,12 @@ func init() {
 	relationConfig := viper.Init("relation")
 	videoConfig := viper.Init("video")
 	favoriteConfig := viper.Init("favorite")
+	commentConfig := viper.Init("comment")
 	InitUser(&userConfig)
 	InitRelation(&relationConfig)
 	InitVideo(&videoConfig)
 	InitFavorite(&favoriteConfig)
+	InitComment(&commentConfig)
 }
 
 func errorHandler(err error, msg string) {
@@ -67,6 +70,8 @@ func initClient(serviceName string, client interface{}) {
 		*c = video.NewVideoServiceClient(conn)
 	case *favorite.FavoriteServiceClient:
 		*c = favorite.NewFavoriteServiceClient(conn)
+	case *comment.CommentServiceClient:
+		*c = comment.NewCommentServiceClient(conn)
 	default:
 		panic("unsupported client type")
 	}

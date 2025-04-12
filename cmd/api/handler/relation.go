@@ -8,6 +8,7 @@ import (
 	"wgxDouYin/cmd/api/rpc"
 	relationGrpc "wgxDouYin/grpc/relation"
 	"wgxDouYin/internal/response"
+	"wgxDouYin/internal/tool"
 )
 
 func RelationAction(c *gin.Context) {
@@ -16,14 +17,10 @@ func RelationAction(c *gin.Context) {
 		c.JSON(http.StatusOK, response.ErrorResponse(err.Error()))
 		return
 	}
-	var actionType relationGrpc.RelationActionType
 	postActionType := c.PostForm("relation_action_type")
-	if postActionType == "0" {
-		actionType = relationGrpc.RelationActionType_FOLLOW
-	} else if postActionType == "1" {
-		actionType = relationGrpc.RelationActionType_UN_FOLLOW
-	} else {
-		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Errorf("action_type不合法").Error()))
+	actionType := tool.StrToRelationActionType(postActionType)
+	if actionType == relationGrpc.RelationActionType_WRONG_TYPE {
+		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Errorf("action_type %v 不合法", postActionType).Error()))
 		return
 	}
 	tokenUserId, exist := c.Get("token_user_id")

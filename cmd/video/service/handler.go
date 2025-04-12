@@ -73,7 +73,6 @@ func (s *VideoServiceImpl) Feed(ctx context.Context, req *video.FeedRequest) (*v
 			}
 			return res, nil
 		}
-		fmt.Printf("created_at:%v\n", uint64(videoRecord.CreatedAt.Unix()))
 		videoLists = append(videoLists, &video.Video{
 			Id: uint64(videoRecord.ID),
 			Author: &user.User{

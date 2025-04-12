@@ -16,12 +16,6 @@ var (
 	db        *gorm.DB
 	config    = viper.Init("db")
 	zapLogger = zap.InitLogger()
-	tables    = map[string]interface{}{
-		"users":     &User{},
-		"videos":    &Video{},
-		"comments":  &Comment{},
-		"relations": &FollowRelation{},
-	}
 )
 
 type DatabaseOperationType int

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-	redisDAO "wgxDouYin/cmd/relation/redisDAO"
+	"wgxDouYin/cmd/relation/redisDAO"
 	"wgxDouYin/dal/db"
-	relation "wgxDouYin/grpc/relation"
+	"wgxDouYin/grpc/relation"
 	"wgxDouYin/grpc/user"
 )
 

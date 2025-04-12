@@ -79,17 +79,14 @@ func CreateRelation(ctx context.Context, followRelation *FollowRelation) error {
 
 func DelRelationByUserID(ctx context.Context, followRelation *FollowRelation) error {
 	err := GetDB().Clauses(dbresolver.Write).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if record := tx.Where("user_id = ? AND to_user_id=?", followRelation.UserID, followRelation.ToUserID).First(followRelation); record.Error != nil {
-			if errors.Is(record.Error, gorm.ErrRecordNotFound) {
-				return errors.New("不能取关你未关注的人")
-			}
-			return record.Error
+		res := tx.Unscoped().Delete(followRelation)
+		if res.Error != nil {
+			return res.Error
 		}
-		err := tx.Unscoped().Delete(followRelation).Error
-		if err != nil {
-			return err
+		if res.RowsAffected == 0 {
+			return errors.New("不能取关你未关注的人")
 		}
-		res := tx.Model(&User{}).Where("id = ?", followRelation.UserID).Update("following_count", gorm.Expr("following_count - ?", 1))
+		res = tx.Model(&User{}).Where("id = ?", followRelation.UserID).Update("following_count", gorm.Expr("following_count - ?", 1))
 		if res.Error != nil {
 			return res.Error
 		}
