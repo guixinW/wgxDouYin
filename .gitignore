@@ -1,7 +1,6 @@
 /docker
 .idea
 .DS_Store
-/config
 **/logs/
 *.log
 *.pem

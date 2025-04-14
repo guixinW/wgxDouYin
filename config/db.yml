@@ -1,0 +1,54 @@
+mysql:
+  source:
+    driverName: mysql
+    host: 127.0.0.1
+    port: 3307
+    database: wgxTiktok
+    username: root
+    password: 1477364283
+    charset: utf8mb4
+  replica1:
+    driverName: mysql
+    host: 127.0.0.1
+    port: 3308
+    database: wgxTiktok
+    username: root
+    password: 1477364283
+    charset: utf8mb4
+  replica2:
+    driverName: mysql
+    host: 127.0.0.1
+    port: 3309
+    database: wgxTiktok
+    username: root
+    password: 1477364283
+    charset: utf8mb4
+
+redis:
+  master:
+    host: 127.0.0.1
+    port: 6379
+    password: 1477364283
+    db: 0
+  replica1:
+    host: 127.0.0.1
+    port: 6380
+    password: 1477364283
+    db: 0
+  replica2:
+    host: 127.0.0.1
+    port: 6381
+    password: 1477364283
+    db: 0
+  sentinel1:
+    host: 127.0.0.1
+    port: 26379
+    password: 1477364283
+  sentinel2:
+    host: 127.0.0.1
+    port: 26380
+    password: 1477364283
+  sentinel3:
+    host: 127.0.0.1
+    port: 26381
+    password: 1477364283

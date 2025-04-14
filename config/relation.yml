@@ -1,0 +1,12 @@
+service:
+  name: "RelationService"
+  host: 0.0.0.0
+  port: 50054
+
+rpc:
+  host: 127.0.0.1
+  port: 50054
+
+etcd:
+  host: 127.0.0.1
+  port: 2379

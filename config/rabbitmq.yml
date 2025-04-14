@@ -1,0 +1,15 @@
+server:
+  name: "TikTokRabbitMQServer"
+  host: 127.0.0.1
+  port: 5672
+  username: tiktokRMQ
+  password: tiktokRMQ
+  vhost: tiktokRMQ
+
+consumer:
+  favorite:
+    autoAck: true
+    prefetchCount: 1000
+  relation:
+    autoAck: true
+    prefetchCount: 1000

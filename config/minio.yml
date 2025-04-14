@@ -1,0 +1,11 @@
+Global:
+  Source: "config(local)"
+  ChangeMe: "v3"
+
+Minio:
+  Endpoint: 127.0.0.1:9000
+  AccessKeyId: wgxTiktok
+  SecretAccessKey: wgxTiktok
+  UseSSL: false
+  VideoBucketName: tiktok-videos
+  ExpireTime: 3600
