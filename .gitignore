@@ -1,7 +1,11 @@
-/docker
+/docker/**
+!docker/*.sh
+!docker/*/*.yml
+
 .idea
 .DS_Store
 **/logs/
 *.log
 *.pem
 *.mp4
+
