@@ -1,0 +1,104 @@
+services:
+  redis-cluster-1: # 服务名称
+    image: redis:latest
+    container_name: redis-cluster-1
+    restart: always
+    volumes: # 数据卷，目录挂载
+      - ./redis-cluster-1/conf/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./redis-cluster-1/data:/data
+    ports:
+      - "6371:6379"
+      - "16371:16379"
+    command:
+      redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      redis_network:
+        ipv4_address: 192.168.1.2
+
+  redis-cluster-2:
+    image: redis:latest
+    container_name: redis-cluster-2
+    restart: always
+    volumes:
+      - ./redis-cluster-2/conf/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./redis-cluster-2/data:/data
+    ports:
+      - "6372:6379"
+      - "16372:16379"
+    command:
+      redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      redis_network:
+        ipv4_address: 192.168.1.3
+
+  redis-cluster-3:
+    image: redis:latest
+    container_name: redis-cluster-3
+    restart: always
+    volumes:
+      - ./redis-cluster-3/conf/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./redis-cluster-3/data:/data
+    ports:
+      - "6373:6379"
+      - "16373:16379"
+    command:
+      redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      redis_network:
+        ipv4_address: 192.168.1.4
+
+  redis-cluster-4:
+    image: redis:latest
+    container_name: redis-cluster-4
+    restart: always
+    volumes:
+      - ./redis-cluster-4/conf/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./redis-cluster-4/data:/data
+    ports:
+      - "6374:6379"
+      - "16374:16379"
+    command:
+      redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      redis_network:
+        ipv4_address: 192.168.1.5
+
+  redis-cluster-5:
+    image: redis:latest
+    container_name: redis-cluster-5
+    restart: always
+    volumes:
+      - ./redis-cluster-5/conf/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./redis-cluster-5/data:/data
+    ports:
+      - "6375:6379"
+      - "16375:16379"
+    command:
+      redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      redis_network:
+        ipv4_address: 192.168.1.6
+
+  redis-cluster-6:
+    image: redis:latest
+    container_name: redis-cluster-6
+    restart: always
+    volumes:
+      - ./redis-cluster-6/conf/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./redis-cluster-6/data:/data
+    ports:
+      - "6376:6379"
+      - "16376:16379"
+    command:
+      redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      redis_network:
+        ipv4_address: 192.168.1.7
+
+networks:
+  redis_network:
+    driver: bridge
+    name: redis_network
+    ipam:
+      config:
+        - subnet: "192.168.1.0/24"

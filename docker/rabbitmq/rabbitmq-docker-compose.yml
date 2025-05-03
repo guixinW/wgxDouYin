@@ -1,0 +1,15 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.11-management
+    container_name: rabbitmq_container
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: tiktokRMQ
+      RABBITMQ_DEFAULT_PASS: tiktokRMQ
+      RABBITMQ_DEFAULT_VHOST: tiktokRMQ
+    volumes:
+      - ./rabbitmq-data:/var/lib/rabbitmq
+      - ./rabbitmq-logs:/var/log/rabbitmq
+    restart: always
