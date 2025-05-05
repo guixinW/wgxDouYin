@@ -8,18 +8,22 @@ import (
 	"wgxDouYin/cmd/api/rpc"
 	"wgxDouYin/pkg/middleware"
 	"wgxDouYin/pkg/viper"
+	"wgxDouYin/pkg/zap"
 )
 
 var (
-	apiConfig     = viper.Init("api")
-	apiServerAddr = fmt.Sprintf("%s:%d", apiConfig.Viper.GetString("service.host"), apiConfig.Viper.GetInt("service.port"))
-	skipRoutes    = []string{
+	apiConfig         = viper.Init("api")
+	apiServerAddr     = fmt.Sprintf("%s:%d", apiConfig.Viper.GetString("service.host"), apiConfig.Viper.GetInt("service.port"))
+	accessSkipRouters = []string{
 		"/wgxdouyin/user/register/",
 		"/wgxdouyin/user/login/",
+		"/wgxdouyin/user/refreshToken/",
+		"/wgxdouyin/user/loginPage/",
 	}
+	refreshRouter        = "/wgxdouyin/user/refreshToken/"
 	ServiceNameMap       map[string]string
 	ServiceDependencyMap map[string]string
-	//logger               = zap.InitLogger()
+	logger               = zap.InitLogger()
 )
 
 func init() {
@@ -29,10 +33,17 @@ func init() {
 	if err := apiConfig.Viper.UnmarshalKey("serviceDependency", &ServiceDependencyMap); err != nil {
 		panic(err)
 	}
+
 }
 
 func InitRouter() *gin.Engine {
 	router := gin.Default()
+	//router.Use(cors.New(cors.Config{
+	//	AllowOrigins:     []string{"http://localhost:8080"},
+	//	AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+	//	AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+	//	AllowCredentials: true,
+	//}))
 	err := router.SetTrustedProxies(nil)
 	if err != nil {
 		panic(err)
@@ -40,13 +51,15 @@ func InitRouter() *gin.Engine {
 	wgxDouYin := router.Group("/wgxdouyin")
 	wgxDouYin.Use(
 		middleware.ServiceAvailabilityMiddleware(ServiceNameMap, rpc.KeysManager),
-		middleware.TokenAuthMiddleware(ServiceDependencyMap, rpc.KeysManager, skipRoutes...))
+		middleware.AccessTokenAuthMiddleware(ServiceDependencyMap, rpc.KeysManager, accessSkipRouters...),
+		middleware.RefreshTokenMiddleware(ServiceNameMap, rpc.KeysManager, refreshRouter))
 	{
 		user := wgxDouYin.Group("/user")
 		{
+			user.GET("/refreshToken/", handler.RefreshToken)
 			user.POST("/register/", handler.UserRegister)
 			user.POST("/login/", handler.UserLogin)
-			user.GET("/", handler.UserInform)
+			user.GET("/userInform/", handler.UserInform)
 		}
 		relation := wgxDouYin.Group("/relation")
 		{

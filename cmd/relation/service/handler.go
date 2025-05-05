@@ -60,6 +60,9 @@ func (s *RelationServiceImpl) RelationAction(ctx context.Context, req *relation.
 		StatusCode: 0,
 		StatusMsg:  "success",
 	}
+	fmt.Printf("relation action created time:%v, relation action delete time:%v\n",
+		relationActionRecord.CreatedAt, relationActionRecord.DeletedAt)
+	//
 	if time.Now().Sub(relationActionRecord.CreatedAt) >= 24*time.Hour {
 		return res, nil
 	}

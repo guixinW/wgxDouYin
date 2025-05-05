@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -35,8 +36,10 @@ func GetRelationByUserIDs(ctx context.Context, userId uint64, toUserID uint64) (
 func CreateRelation(ctx context.Context, followRelation *FollowRelation) error {
 	err := GetDB().Clauses(dbresolver.Write).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		createRes := tx.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}, {Name: "to_user_id"}},
-			DoNothing: true,
+			Columns: []clause.Column{{Name: "user_id"}, {Name: "to_user_id"}},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"deleted_at": nil,
+			}),
 		}).Create(followRelation)
 
 		//判断是否出现错误以及是否未正常插入
@@ -49,23 +52,20 @@ func CreateRelation(ctx context.Context, followRelation *FollowRelation) error {
 			}
 			return createRes.Error
 		}
+		fmt.Printf("createRes.RowsAffected:%v\n", createRes.RowsAffected)
 		if createRes.RowsAffected == 0 {
 			return errors.New("重复关注")
 		}
 
 		//更改被关注人的follower_count以及关注人的following_count
-		res := tx.Model(&User{}).Where("id = ?", followRelation.UserID).
-			Update("following_count",
-				gorm.Expr("following_count + ?", 1))
+		res := tx.Model(&User{}).Where("id = ?", followRelation.UserID).Update("following_count", gorm.Expr("following_count + ?", 1))
 		if res.Error != nil {
 			return res.Error
 		}
 		if res.RowsAffected != 1 {
 			return NewDatabaseErrorMessage(followRelation.UserID, "CreateRelation", Update)
 		}
-		res = tx.Model(&User{}).Where("id = ?", followRelation.ToUserID).
-			Update("follower_count",
-				gorm.Expr("follower_count + ?", 1))
+		res = tx.Model(&User{}).Where("id = ?", followRelation.ToUserID).Update("follower_count", gorm.Expr("follower_count + ?", 1))
 		if res.Error != nil {
 			return res.Error
 		}
@@ -79,7 +79,7 @@ func CreateRelation(ctx context.Context, followRelation *FollowRelation) error {
 
 func DelRelationByUserID(ctx context.Context, followRelation *FollowRelation) error {
 	err := GetDB().Clauses(dbresolver.Write).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		res := tx.Unscoped().Delete(followRelation)
+		res := tx.Where("user_id=? and to_user_id=?", followRelation.UserID, followRelation.ToUserID).Delete(followRelation)
 		if res.Error != nil {
 			return res.Error
 		}

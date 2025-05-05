@@ -3,8 +3,8 @@ package service
 import (
 	"crypto/ecdsa"
 	"wgxDouYin/pkg/keys"
-	rabbitmq "wgxDouYin/pkg/rabbitMQ"
 	"wgxDouYin/pkg/zap"
+	rabbitmq "wgxDouYinPage/pkg/rabbitMQ"
 )
 
 var (

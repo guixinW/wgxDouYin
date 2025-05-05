@@ -5,13 +5,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
+	"wgxDouYin/internal/response"
 	"wgxDouYin/pkg/etcd"
 	"wgxDouYin/pkg/jwt"
 	"wgxDouYin/pkg/keys"
 )
 
-// TokenAuthMiddleware JWT验证中间件.skipRoutes为无需验证的请求
-func TokenAuthMiddleware(serviceDependencyMap map[string]string, keys *keys.KeyManager, skipRoutes ...string) gin.HandlerFunc {
+// AccessTokenAuthMiddleware JWT验证中间件.skipRoutes为无需验证的请求
+func AccessTokenAuthMiddleware(serviceDependencyMap map[string]string, keys *keys.KeyManager, skipRoutes ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		for _, skipRoute := range skipRoutes {
 			if 0 == strings.Compare(c.FullPath(), skipRoute) {
@@ -21,32 +22,33 @@ func TokenAuthMiddleware(serviceDependencyMap map[string]string, keys *keys.KeyM
 		}
 		serviceName, err := getServiceName(c.FullPath())
 		if err != nil {
-			responseWithError(c, http.StatusUnauthorized, err)
+			response.AbortWithError(c, http.StatusUnauthorized, response.StatusOther, err.Error())
 		}
 		authHeader := c.GetHeader("Authorization")
+		fmt.Printf("get header:%v\n", authHeader)
 		if authHeader == "" {
-			responseWithError(c, http.StatusUnauthorized, "Authorization header is missing")
+			c.JSON(http.StatusUnauthorized, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
 			return
 		}
 		authParts := strings.Split(authHeader, " ")
-		if len(authParts) != 2 || authParts[0] != "Bearer" {
-			responseWithError(c, http.StatusUnauthorized, "Authorization header format is incorrect")
+		if authParts[0] != "Bearer" || len(authParts) != 2 {
+			response.AbortWithError(c, http.StatusUnauthorized, response.StatusOther, "Authorization header format is incorrect")
 			return
 		}
-		tokenString := authParts[1]
+		AccessToken := authParts[1]
 		dependencyService := serviceDependencyMap[serviceName]
 		publicKey, err := keys.GetServerPublicKey(etcd.KeyPrefix(dependencyService))
 		if err != nil {
-			responseWithError(c, http.StatusUnauthorized, err.Error())
+			response.AbortWithError(c, http.StatusUnauthorized, response.StatusOther, err.Error())
 			return
 		}
 		if publicKey == nil {
-			responseWithError(c, http.StatusUnauthorized, "public key is nil")
+			response.AbortWithError(c, http.StatusUnauthorized, response.StatusOther, "public key is nil")
 			return
 		}
-		claim, err := jwt.ParseToken(publicKey, tokenString)
+		claim, err := jwt.ParseToken(publicKey, AccessToken)
 		if err != nil {
-			responseWithError(c, http.StatusUnauthorized, err.Error())
+			response.AbortWithError(c, http.StatusUnauthorized, response.StatusTokenExpired, err.Error())
 			return
 		}
 		c.Set("token_user_id", claim.UserId)

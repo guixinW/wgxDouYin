@@ -6,11 +6,11 @@ import (
 	"google.golang.org/grpc"
 	"net"
 	"wgxDouYin/cmd/video/service"
-	videoPb "wgxDouYin/grpc/video"
 	"wgxDouYin/pkg/etcd"
 	"wgxDouYin/pkg/keys"
 	"wgxDouYin/pkg/viper"
 	"wgxDouYin/pkg/zap"
+	videoPb "wgxDouYinPage/grpc/video"
 )
 
 var (

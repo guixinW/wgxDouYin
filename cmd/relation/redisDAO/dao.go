@@ -9,14 +9,16 @@ import (
 	"time"
 	wgxRedis "wgxDouYin/dal/redis"
 	"wgxDouYin/grpc/relation"
+	"wgxDouYin/grpc/user"
 	"wgxDouYin/internal/tool"
 )
 
 type RelationCache struct {
-	UserID     uint64                      `json:"user_id" redis:"user_id"`
-	ToUserID   uint64                      `json:"to_user_id" redis:"to_user_id"`
-	CreatedAt  time.Time                   `json:"created_at" redis:"created_at"`
-	ActionType relation.RelationActionType `json:"action_type" redis:"action_type"`
+	UserID       uint64                      `json:"user_id" redis:"user_id"`
+	ToUserID     uint64                      `json:"to_user_id" redis:"to_user_id"`
+	CreatedAt    time.Time                   `json:"created_at" redis:"created_at"`
+	ActionType   relation.RelationActionType `json:"action_type" redis:"action_type"`
+	ToUserInform user.User                   `json:"to_user_inform" redis:"to_user_inform"`
 }
 
 const followerRankName = "follower_rank"

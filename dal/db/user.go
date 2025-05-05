@@ -9,14 +9,16 @@ import (
 
 type User struct {
 	gorm.Model
-	UserName       string  `gorm:"index:idx_username, unique;type:varchar(40);not null" json:"name,omitempty"`
-	Password       string  `gorm:"type:varchar(256);not null" json:"password,omitempty"`
-	FavoriteVideos []Video `gorm:"many2many:user_favorite_videos" json:"favorite_videos,omitempty"`
-	FollowingCount uint64  `gorm:"default:0;not null" json:"follow_count,omitempty"`
-	FollowerCount  uint64  `gorm:"default:0;not null" json:"follower_count,omitempty"`
-	WorkCount      uint64  `gorm:"default:0;not null" json:"work_count,omitempty"`
-	FavoriteCount  uint64  `gorm:"default:0;not null" json:"favorite_count,omitempty"`
-	DislikeCount   uint64  `gorm:"default:0;not null" json:"dislike_count,omitempty"`
+	UserName           string  `gorm:"index:idx_username, unique;type:varchar(40);not null" json:"name,omitempty"`
+	Password           string  `gorm:"type:varchar(256);not null" json:"password,omitempty"`
+	FavoriteVideos     []Video `gorm:"many2many:user_favorite_videos" json:"favorite_videos,omitempty"`
+	FollowingCount     uint64  `gorm:"default:0;not null" json:"follow_count,omitempty"`
+	FollowerCount      uint64  `gorm:"default:0;not null" json:"follower_count,omitempty"`
+	WorkCount          uint64  `gorm:"default:0;not null" json:"work_count,omitempty"`
+	FavoriteCount      uint64  `gorm:"default:0;not null" json:"favorite_count,omitempty"`
+	DislikeCount       uint64  `gorm:"default:0;not null" json:"dislike_count,omitempty"`
+	RefreshHashedToken string  `gorm:"type:char(64)" json:"refresh_hashed_token,omitempty"`
+	DeviceId           string  `gorm:"type:char(36)" json:"device_id,omitempty"`
 }
 
 func (User) TableName() string {
@@ -47,13 +49,11 @@ func GetUserByIDs(ctx context.Context, userIDs []uint64) ([]*User, error) {
 	return res, nil
 }
 
-// GetUserByName 根据用户名获取用户信息
-func GetUserByName(ctx context.Context, userName string) (*User, error) {
-	res := new(User)
-	if err := GetDB().Clauses(dbresolver.Read).WithContext(ctx).Select("id, user_name, password").Where("user_name = ?", userName).Limit(1).Find(&res).Error; err == nil {
+// GetUserNameIdAndPasswordByName 根据用户名获取用户信息
+func GetUserNameIdAndPasswordByName(ctx context.Context, userName string) (*User, error) {
+	var res *User
+	if err := GetDB().Clauses(dbresolver.Read).WithContext(ctx).Select("id, user_name, password").Where("user_name = ?", userName).First(&res).Error; err == nil {
 		return res, nil
-	} else if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
 	} else {
 		return nil, err
 	}
@@ -77,6 +77,27 @@ func GetPasswordByUsername(ctx context.Context, userName string) (*User, error) 
 		Select("password").Where("user_name = ?", userName).
 		First(&user).Error; err == nil {
 		return user, nil
+	} else {
+		return nil, err
+	}
+}
+
+func UpdateDeviceIdAndRefreshToken(ctx context.Context, user *User, newDeviceId, newRefreshToken string) error {
+	user.DeviceId = newDeviceId
+	user.RefreshHashedToken = newRefreshToken
+	if err := GetDB().WithContext(ctx).Model(&User{}).Where("id = ?", user.ID).Updates(map[string]interface{}{
+		"device_id":            newDeviceId,
+		"refresh_hashed_token": newRefreshToken,
+	}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetRefreshTokenAndDeviceIdByUserId(ctx context.Context, userId uint64) (*User, error) {
+	var res *User
+	if err := GetDB().Clauses(dbresolver.Read).WithContext(ctx).Select("refresh_hashed_token, device_id").Where("id = ?", userId).First(&res).Error; err == nil {
+		return res, nil
 	} else {
 		return nil, err
 	}

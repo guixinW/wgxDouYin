@@ -2,14 +2,19 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 	"time"
 	"wgxDouYin/dal/db"
-	user "wgxDouYin/grpc/user"
+	"wgxDouYin/grpc/user"
 	"wgxDouYin/internal/tool"
 	myJwt "wgxDouYin/pkg/jwt"
-	"wgxDouYin/pkg/zap"
+)
+
+const (
+	AccessTokenExpireTime  = 60 * 60 * 24 * 7
+	RefreshTokenExpireTime = 60 * 60 * 24 * 7
 )
 
 type UserServiceImpl struct {
@@ -17,15 +22,18 @@ type UserServiceImpl struct {
 }
 
 func (s *UserServiceImpl) UserRegister(ctx context.Context, req *user.UserRegisterRequest) (resp *user.UserRegisterResponse, err error) {
-	usr, err := db.GetUserByName(ctx, req.Username)
+	usr, err := db.GetUserNameIdAndPasswordByName(ctx, req.Username)
 	if err != nil {
-		logger.Errorln(err.Error())
-		res := &user.UserRegisterResponse{
-			StatusCode: -1,
-			StatusMsg:  "注册失败，getUserByName服务器内部错误",
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			logger.Errorln(err.Error())
+			res := &user.UserRegisterResponse{
+				StatusCode: -1,
+				StatusMsg:  "注册失败，getUserByName服务器内部错误",
+			}
+			return res, err
 		}
-		return res, err
-	} else if usr != nil {
+	}
+	if usr != nil {
 		logger.Errorf("该用户名已存在:%s", usr.UserName)
 		res := &user.UserRegisterResponse{
 			StatusCode: -1,
@@ -54,49 +62,95 @@ func (s *UserServiceImpl) UserRegister(ctx context.Context, req *user.UserRegist
 	return res, nil
 }
 
-func (s *UserServiceImpl) Login(ctx context.Context, req *user.UserLoginRequest) (resp *user.UserLoginResponse, err error) {
-	logger := zap.InitLogger()
-	start := time.Now()
-	usr, err := db.GetUserByName(ctx, req.Username)
-	end := time.Now()
-	fmt.Printf("数据库查询耗时：%v\n", end.Sub(start))
+func (s *UserServiceImpl) RefreshAccessToken(ctx context.Context, req *user.AccessTokenRequest) (resp *user.AccessTokenResponse, err error) {
+	//通过签发的token解析的userID不可能不存在
+	userDeviceAndRefreshToken, err := db.GetRefreshTokenAndDeviceIdByUserId(ctx, req.UserId)
 	if err != nil {
-		logger.Errorln(err.Error())
-		res := &user.UserLoginResponse{
+		res := &user.AccessTokenResponse{
 			StatusCode: -1,
-			StatusMsg:  "登陆失败：服务器内部错误",
-		}
-		return res, err
-	} else if usr == nil {
-		res := &user.UserLoginResponse{
-			StatusCode: -1,
-			StatusMsg:  "用户名不存在",
+			StatusMsg:  "服务器内部错误",
 		}
 		return res, nil
 	}
-	start = time.Now()
+	if tool.GenerateHashOfLength64(req.RefreshToken) != userDeviceAndRefreshToken.RefreshHashedToken ||
+		req.DeviceId != userDeviceAndRefreshToken.DeviceId {
+		res := &user.AccessTokenResponse{
+			StatusCode: -1,
+			StatusMsg:  "该账号存在安全风险",
+		}
+		return res, nil
+	}
+	accessClaims := myJwt.CustomClaims{
+		UserId: req.UserId,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(AccessTokenExpireTime * time.Second)),
+			Issuer:    "Login",
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	accessToken, err := myJwt.CreateToken(KeyManager.GetPrivateKey(), accessClaims)
+	if err != nil {
+		logger.Errorf("发生错误:%v", err.Error())
+		res := &user.AccessTokenResponse{
+			StatusCode: -1,
+			StatusMsg:  "服务器内部错误：token 创建失败",
+		}
+		return res, nil
+	}
+	res := &user.AccessTokenResponse{
+		AccessToken: accessToken,
+		StatusCode:  0,
+		StatusMsg:   "success",
+	}
+	return res, nil
+}
+
+// Login 登陆
+func (s *UserServiceImpl) Login(ctx context.Context, req *user.UserLoginRequest) (resp *user.UserLoginResponse, err error) {
+	//1.查询用户是否存在
+	usr, err := db.GetUserNameIdAndPasswordByName(ctx, req.Username)
+	if err != nil {
+		var res user.UserLoginResponse
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			res = user.UserLoginResponse{
+				StatusCode: -1,
+				StatusMsg:  "登陆失败：不存在该用户",
+			}
+		} else {
+			res = user.UserLoginResponse{
+				StatusCode: -1,
+				StatusMsg:  "登陆失败：服务器内部错误",
+			}
+		}
+		return &res, err
+	}
+	//2.比较密码是否正确
 	if tool.PasswordCompare(req.Password, usr.Password) == false {
-		logger.Errorf("%v尝试登录，但是密码%v错误", req.Username, req.Password)
 		res := &user.UserLoginResponse{
 			StatusCode: -1,
 			StatusMsg:  "用户名或密码错误",
 		}
 		return res, nil
 	}
-	end = time.Now()
-	fmt.Printf("比较密钥耗时：%v\n", end.Sub(start))
-	claims := myJwt.CustomClaims{
+
+	//3.签发token
+	refreshClaims := myJwt.CustomClaims{
 		UserId: uint64(usr.ID),
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(72 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(RefreshTokenExpireTime * time.Second)),
 			Issuer:    "Login",
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
-	start = time.Now()
-	token, err := myJwt.CreateToken(KeyManager.GetPrivateKey(), claims)
-	end = time.Now()
-	fmt.Printf("签发token耗时：%v\n", end.Sub(start))
+	accessClaims := myJwt.CustomClaims{
+		UserId: uint64(usr.ID),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(AccessTokenExpireTime * time.Second)),
+			Issuer:    "Login",
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	refreshToken, err := myJwt.CreateToken(KeyManager.GetPrivateKey(), refreshClaims)
 	if err != nil {
 		logger.Errorf("发生错误:%v", err.Error())
 		res := &user.UserLoginResponse{
@@ -105,42 +159,47 @@ func (s *UserServiceImpl) Login(ctx context.Context, req *user.UserLoginRequest)
 		}
 		return res, nil
 	}
+	accessToken, err := myJwt.CreateToken(KeyManager.GetPrivateKey(), accessClaims)
+	if err != nil {
+		logger.Errorf("发生错误:%v", err.Error())
+		res := &user.UserLoginResponse{
+			StatusCode: -1,
+			StatusMsg:  "服务器内部错误：token 创建失败",
+		}
+		return res, nil
+	}
+	refreshTokenHashed := tool.GenerateHashOfLength64(refreshToken)
+	if err := db.UpdateDeviceIdAndRefreshToken(ctx, usr, req.DeviceId, refreshTokenHashed); err != nil {
+		logger.Errorf("发生错误:%v", err.Error())
+		res := &user.UserLoginResponse{
+			StatusCode: -1,
+			StatusMsg:  "登陆失败",
+		}
+		return res, nil
+	}
+
+	//4.返回token
 	res := &user.UserLoginResponse{
-		StatusCode: 0,
-		StatusMsg:  "success",
-		UserId:     uint64(usr.ID),
-		Token:      token,
+		StatusCode:   0,
+		StatusMsg:    "success",
+		UserId:       uint64(usr.ID),
+		RefreshToken: refreshToken,
+		AccessToken:  accessToken,
 	}
 	return res, nil
 }
 
+// UserInfo 接收一个包含tokenUserId、queryUserID的rpc请求。返回queryUserID的信息
+// 由于tokenUserID能够确定是登陆用户发送的，因此无需查看该id的合法性
 func (s *UserServiceImpl) UserInfo(ctx context.Context, req *user.UserInfoRequest) (resp *user.UserInfoResponse, err error) {
-	logger := zap.InitLogger()
-	usr, err := db.GetUserByID(ctx, req.UserId)
-	if err != nil {
-		logger.Errorln(err.Error())
-		res := &user.UserInfoResponse{
-			StatusCode: -1,
-			StatusMsg:  "获取用户信息失败：服务器内部错误",
-		}
-		return res, err
-	} else if usr == nil {
-		res := &user.UserInfoResponse{
-			StatusCode: -1,
-			StatusMsg:  "用户名不存在",
-		}
-		return res, nil
-	} else {
-		res := &user.UserInfoResponse{
-			StatusCode: 0,
-			StatusMsg:  "success",
-			User: &user.User{
-				Id:             uint64(usr.ID),
-				Name:           usr.UserName,
-				FollowerCount:  usr.FollowerCount,
-				FollowingCount: usr.FollowingCount,
-			},
-		}
-		return res, nil
+	//用户查看自身信息与查看其他用户信息需要区分开，
+	//A.用户查看自身信息通过MySQL查询详细信息，包含favorite_count、dislike_count（其他用户查询则不包含）
+	//B.用户查看其他用户信息通过Redis查询该用户是否为热点用户，如果是则直接返回Redis中的数据，如果不是则查询MySQL
+	//查询步骤：
+	//1.先通过Redis查看用户是否为热点用户，如果是则直接使用Redis
+	//2.如果是
+	if req.QueryUserId == req.TokenUserId {
+		return querySelf(ctx, req.QueryUserId)
 	}
+	return queryOtherUser(ctx, req.QueryUserId)
 }

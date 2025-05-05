@@ -348,10 +348,10 @@ Transfer/sec:     76.78KB
 可见整个系统的对于登陆接口，最多允许一秒内同时登陆200次。同时，根据后台报错，发现如下问题，即一些查询超过200ms，被标记为慢查询。
 
 ```bash
-2025/04/07 15:30:53 /Users/wangguixin/wgx/Project/wgxDouYin/dal/db/user.go:52 SLOW SQL >= 200ms
+2025/04/07 15:30:53 /Users/wangguixin/wgx/Project/wgxDouYinPage/dal/db/user.go:52 SLOW SQL >= 200ms
 [289.575ms] [rows:1] SELECT id, user_name, password FROM `users` WHERE user_name = 'test2' AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT 1
 
-2025/04/07 15:30:53 /Users/wangguixin/wgx/Project/wgxDouYin/dal/db/user.go:52 SLOW SQL >= 200ms
+2025/04/07 15:30:53 /Users/wangguixin/wgx/Project/wgxDouYinPage/dal/db/user.go:52 SLOW SQL >= 200ms
 [294.447ms] [rows:1] SELECT id, user_name, password FROM `users` WHERE user_name = 'test5' AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT 1
 ```
 Login rpc server端主要是使用了三个函数分别是`GetUserByName` 、`PasswordCompare` 、`CreateToken` 。下面是这三个函数单次Query的执行时间：
