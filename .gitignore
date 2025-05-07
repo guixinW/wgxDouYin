@@ -1,7 +1,6 @@
 /docker/**
 !docker/*.sh
 !docker/*/*.yml
-
 .idea
 .DS_Store
 **/logs/

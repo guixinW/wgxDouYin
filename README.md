@@ -1,3 +1,8 @@
+# wgxDouYin
+## 框架图
+
+![程序框架图](/readme/程序框架图.jpg)
+
 ## Raft
 
 ### 概述
