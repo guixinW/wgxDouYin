@@ -14,6 +14,11 @@ import (
 // AccessTokenAuthMiddleware JWT验证中间件.skipRoutes为无需验证的请求
 func AccessTokenAuthMiddleware(serviceDependencyMap map[string]string, keys *keys.KeyManager, skipRoutes ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		//queryUserId, err := strconv.ParseUint(c.Query("query_user_id"), 10, 64)
+		//if queryUserId == 3 {
+		//	c.Set("token_user_id", uint64(2))
+		//	c.Next()
+		//}
 		for _, skipRoute := range skipRoutes {
 			if 0 == strings.Compare(c.FullPath(), skipRoute) {
 				c.Next()
@@ -23,11 +28,11 @@ func AccessTokenAuthMiddleware(serviceDependencyMap map[string]string, keys *key
 		serviceName, err := getServiceName(c.FullPath())
 		if err != nil {
 			response.AbortWithError(c, http.StatusUnauthorized, response.StatusOther, err.Error())
+			return
 		}
 		authHeader := c.GetHeader("Authorization")
-		fmt.Printf("get header:%v\n", authHeader)
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
+			response.AbortWithError(c, http.StatusUnauthorized, response.StatusTokenInvalid, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
 			return
 		}
 		authParts := strings.Split(authHeader, " ")

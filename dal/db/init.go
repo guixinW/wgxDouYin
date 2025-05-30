@@ -53,11 +53,11 @@ func init() {
 	if err != nil {
 		panic(err.Error())
 	}
-	dsn2 := getDsn("mysql.replica1")
-	dsn3 := getDsn("mysql.replica2")
+	//dsn2 := getDsn("mysql.replica1")
+	//dsn3 := getDsn("mysql.replica2")
 	err = db.Use(dbresolver.Register(dbresolver.Config{
-		Sources:           []gorm.Dialector{mysql.Open(dsn1)},
-		Replicas:          []gorm.Dialector{mysql.Open(dsn2), mysql.Open(dsn3)},
+		Sources: []gorm.Dialector{mysql.Open(dsn1)},
+		//Replicas:          []gorm.Dialector{mysql.Open(dsn2), mysql.Open(dsn3)},
 		Policy:            dbresolver.RandomPolicy{},
 		TraceResolverMode: false,
 	}))

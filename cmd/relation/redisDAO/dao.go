@@ -1,116 +1,126 @@
-package redisDAO
+package relatioDAO
 
 import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/redis/go-redis/v9"
 	"strconv"
 	"strings"
 	"time"
 	wgxRedis "wgxDouYin/dal/redis"
 	"wgxDouYin/grpc/relation"
-	"wgxDouYin/grpc/user"
 	"wgxDouYin/internal/tool"
 )
 
 type RelationCache struct {
-	UserID       uint64                      `json:"user_id" redis:"user_id"`
-	ToUserID     uint64                      `json:"to_user_id" redis:"to_user_id"`
-	CreatedAt    time.Time                   `json:"created_at" redis:"created_at"`
-	ActionType   relation.RelationActionType `json:"action_type" redis:"action_type"`
-	ToUserInform user.User                   `json:"to_user_inform" redis:"to_user_inform"`
+	UserID     uint64                      `json:"user_id" redis:"user_id"`
+	ToUserID   uint64                      `json:"to_user_id" redis:"to_user_id"`
+	UpdatedAt  time.Time                   `json:"updated_at" redis:"updated_at"`
+	CreatedAt  time.Time                   `json:"created_at" redis:"created_at"`
+	ActionType relation.RelationActionType `json:"action_type" redis:"action_type"`
 }
 
 const followerRankName = "follower_rank"
 
-func UpdateRelation(ctx context.Context, relationCache *RelationCache) error {
+func IncrAndCheckTopRank(ctx context.Context, key string, member string, incr float64, topN int64) (bool, error) {
+	luaScript := redis.NewScript(`
+		local score = redis.call("ZINCRBY", KEYS[1], ARGV[2], ARGV[1])
+		local rank = redis.call("ZREVRANK", KEYS[1], ARGV[1])
+		if rank ~= false and rank <= tonumber(ARGV[3]) then
+			return 1
+		else
+			return 0
+		end
+	`)
+	result, err := luaScript.Run(ctx, wgxRedis.GetRedisHelper(), []string{key}, member, incr, topN-1).Result()
+	if err != nil {
+		return false, err
+	}
+	inTopN, ok := result.(int64)
+	if !ok {
+		return false, nil
+	}
+	return inTopN == 1, nil
+}
+
+func handleFollow(ctx context.Context, cache *RelationCache) (bool, error) {
+	userIDStr := strconv.Itoa(int(cache.UserID))
+	toUserIDStr := strconv.Itoa(int(cache.ToUserID))
+
+	if err := wgxRedis.AddValueToKeySet(ctx, fmt.Sprintf("follower::%d", cache.ToUserID), []string{userIDStr}); err != nil {
+		return false, wgxRedis.ErrorWrap(err, "add follower error")
+	}
+	if err := wgxRedis.AddValueToKeySet(ctx, fmt.Sprintf("following::%d", cache.UserID), []string{toUserIDStr}); err != nil {
+		return false, wgxRedis.ErrorWrap(err, "add following error")
+	}
+	inRank, err := IncrAndCheckTopRank(ctx, followerRankName, fmt.Sprintf("%d", cache.ToUserID), 1, 5)
+	return inRank, err
+}
+
+func handleUnfollow(ctx context.Context, cache *RelationCache) (bool, error) {
+	userIDStr := strconv.Itoa(int(cache.UserID))
+	toUserIDStr := strconv.Itoa(int(cache.ToUserID))
+	if err := wgxRedis.DelValueFormKeySet(ctx, fmt.Sprintf("follower::%d", cache.ToUserID), []string{userIDStr}, wgxRedis.RelationMutex); err != nil {
+		return false, wgxRedis.ErrorWrap(err, "del follower error")
+	}
+	if err := wgxRedis.DelValueFormKeySet(ctx, fmt.Sprintf("following::%d", cache.UserID), []string{toUserIDStr}, wgxRedis.RelationMutex); err != nil {
+		return false, wgxRedis.ErrorWrap(err, "del following error")
+	}
+	inRank, err := IncrAndCheckTopRank(ctx, followerRankName, fmt.Sprintf("%d", cache.ToUserID), -1, 5)
+	return inRank, err
+}
+
+func UpdateRelation(ctx context.Context, relationCache *RelationCache) (bool, error) {
 	keyRelation := fmt.Sprintf("user::%d::to_user::%d", relationCache.UserID, relationCache.ToUserID)
-	valueRelation := fmt.Sprintf("%d::%d", relationCache.CreatedAt.UnixMilli(), relationCache.ActionType)
-	follower := fmt.Sprintf("follower::%d", relationCache.ToUserID)
-	following := fmt.Sprintf("following::%d", relationCache.UserID)
-	expireTime := relationCache.CreatedAt.Add(wgxRedis.ExpireTime)
-
-	addAction := func() error {
-		err := wgxRedis.AddValueToKeySet(ctx, follower, []string{strconv.Itoa(int(relationCache.UserID))}, wgxRedis.RelationMutex)
-		if err != nil {
-			return wgxRedis.ErrorWrap(err, "UpdateRelation set follower error")
-		}
-		err = wgxRedis.AddValueToKeySet(ctx, following, []string{strconv.Itoa(int(relationCache.ToUserID))}, wgxRedis.RelationMutex)
-		if err != nil {
-			return wgxRedis.ErrorWrap(err, "UpdateRelation set following error")
-		}
-		err = wgxRedis.IncrNumInZSet(ctx, followerRankName, fmt.Sprintf("%v", relationCache.ToUserID), 1, wgxRedis.RelationMutex)
-		if err != nil {
-			return wgxRedis.ErrorWrap(err, "UpdateRelation set follower error")
-		}
-		return nil
-	}
-	deleteAction := func() error {
-		err := wgxRedis.DelValueFormKeySet(ctx, follower, []string{strconv.Itoa(int(relationCache.UserID))}, wgxRedis.RelationMutex)
-		if err != nil {
-			return wgxRedis.ErrorWrap(err, "UpdateRelation set follower error")
-		}
-		err = wgxRedis.DelValueFormKeySet(ctx, following, []string{strconv.Itoa(int(relationCache.ToUserID))}, wgxRedis.RelationMutex)
-		if err != nil {
-			return wgxRedis.ErrorWrap(err, "UpdateRelation set following error")
-		}
-		err = wgxRedis.IncrNumInZSet(ctx, followerRankName, fmt.Sprintf("%v", relationCache.ToUserID), -1, wgxRedis.RelationMutex)
-		if err != nil {
-			return wgxRedis.ErrorWrap(err, "UpdateRelation set follower error")
-		}
-		return nil
-	}
-
+	valueRelation := fmt.Sprintf("%d::%d", relationCache.UpdatedAt.UnixMilli(), relationCache.ActionType)
+	expireTime := relationCache.CreatedAt.Add(wgxRedis.KeyExpireTime)
 	keyExisted, err := wgxRedis.IsKeyExist(ctx, keyRelation)
 	if err != nil {
-		return wgxRedis.ErrorWrap(err, "UpdateRelation KeyExist error")
+		return false, wgxRedis.ErrorWrap(err, "UpdateRelation KeyExist error")
 	}
+	//如果keyRelation不存在，则直接添加
 	if !keyExisted {
-		err := wgxRedis.SetKeyValue(ctx, keyRelation, valueRelation, expireTime, wgxRedis.RelationMutex)
+		err := wgxRedis.SetKeyValue(ctx, keyRelation, valueRelation, expireTime)
 		if err != nil {
-			return wgxRedis.ErrorWrap(err, "UpdateRelation set read key error")
+			return false, wgxRedis.ErrorWrap(err, "UpdateRelation set read key error")
 		}
 		if relationCache.ActionType == relation.RelationActionType_FOLLOW {
-			err = addAction()
-			if err != nil {
-				return err
-			}
-		}
-	} else {
-		existRelationValue, err := wgxRedis.GetKeyValue(ctx, keyRelation)
-		if err != nil {
-			return wgxRedis.ErrorWrap(err, "UpdateRelation get keyRelationRead error")
-		}
-		existRelationValueSplit := strings.Split(existRelationValue, "::")
-		existRelationCreatedAt, err := wgxRedis.ParseMillisTimestamp(existRelationValueSplit[0])
-		if err != nil {
-			return wgxRedis.ErrorWrap(err, "UpdateFavorite relation redis time error")
-		}
-		existRelationActionType := tool.StrToRelationActionType(existRelationValueSplit[1])
-		if existRelationActionType == relationCache.ActionType {
-			return nil
-		}
-
-		//说明消息队列传入的消息为最新且action_type改变，需要根据action_type更新
-		if relationCache.CreatedAt.After(existRelationCreatedAt) {
-			err := wgxRedis.SetKeyValue(ctx, keyRelation, valueRelation, expireTime, wgxRedis.RelationMutex)
-			if err != nil {
-				return wgxRedis.ErrorWrap(err, "UpdateRelation")
-			}
-			if existRelationActionType == relation.RelationActionType_UN_FOLLOW {
-				err = deleteAction()
-				if err != nil {
-					return err
-				}
-			} else if existRelationActionType == relation.RelationActionType_FOLLOW {
-				err = addAction()
-				if err != nil {
-					return err
-				}
-			}
+			return handleFollow(ctx, relationCache)
 		}
 	}
-	return nil
+
+	//如果存在，则与现有的keyRelation比较，查看是否需要更新
+	existRelationValue, err := wgxRedis.GetKeyValue(ctx, keyRelation)
+	if err != nil {
+		return false, wgxRedis.ErrorWrap(err, "UpdateRelation get keyRelationRead error")
+	}
+	existRelationValueSplit := strings.Split(existRelationValue, "::")
+	existRelationUpdatedAt, err := wgxRedis.ParseMillisTimestamp(existRelationValueSplit[0])
+	if err != nil {
+		return false, wgxRedis.ErrorWrap(err, "UpdateFavorite relation redis time error")
+	}
+	existRelationActionType := tool.StrToRelationActionType(existRelationValueSplit[1])
+	if existRelationActionType == relationCache.ActionType {
+		return false, nil
+	}
+
+	//说明消息队列传入的消息为最新且action_type改变，需要根据action_type更新
+	if relationCache.UpdatedAt.After(existRelationUpdatedAt) {
+		err := wgxRedis.SetKeyValue(ctx, keyRelation, valueRelation, expireTime)
+		if err != nil {
+			return false, wgxRedis.ErrorWrap(err, "UpdateRelation")
+		}
+		//当前relation为UN_FOLLOW，需要改变为FOLLOW
+		if existRelationActionType == relation.RelationActionType_UN_FOLLOW {
+			return handleFollow(ctx, relationCache)
+		}
+		//当前relation为FOLLOW，需要改变为UN_FOLLOW
+		if existRelationActionType == relation.RelationActionType_FOLLOW {
+			return handleUnfollow(ctx, relationCache)
+		}
+	}
+	return false, nil
 }
 
 // GetFollowerIDs 根据userID获取其粉丝ID列表

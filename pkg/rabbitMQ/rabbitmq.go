@@ -9,23 +9,17 @@ import (
 )
 
 type RabbitMQ struct {
-	conn          *amqp.Connection
-	channel       *amqp.Channel
-	QueueName     string
-	Exchange      string
-	Key           string
-	MqUrl         string
-	Queue         amqp.Queue
-	notifyClose   chan *amqp.Error
-	notifyConfirm chan amqp.Confirmation
-	prefetchCount int
+	conn      *amqp.Connection
+	channel   *amqp.Channel
+	queue     amqp.Queue
+	queueName string
 }
 
 func GetServerAck(ServerName string) bool {
 	return config.Viper.GetBool(fmt.Sprintf("consumer.%v.autoAck", ServerName))
 }
 
-func DefaultRabbitMQInstance(ServerName string) (*RabbitMQ, error) {
+func GetMqUrl() string {
 	MqUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/%v",
 		config.Viper.GetString("server.username"),
 		config.Viper.GetString("server.password"),
@@ -33,19 +27,13 @@ func DefaultRabbitMQInstance(ServerName string) (*RabbitMQ, error) {
 		config.Viper.GetInt("server.port"),
 		config.Viper.GetString("server.vhost"),
 	)
-	prefetchCount := config.Viper.GetInt(fmt.Sprintf("consumer.%v.prefetchCount", ServerName))
-	autoAck := config.Viper.GetBool(fmt.Sprintf("consumer.%v.autoAck", ServerName))
-	return NewRabbitMQInstance(ServerName, "", "", MqUrl, prefetchCount, autoAck)
+	return MqUrl
 }
 
-func NewRabbitMQStruct(queueName string, exchange string, key string, MqUrl string, prefetchCount int) *RabbitMQ {
-	return &RabbitMQ{QueueName: queueName, Exchange: exchange, Key: key, MqUrl: MqUrl, prefetchCount: prefetchCount}
-}
-
-func NewRabbitMQInstance(queueName, exchange, key, MqUrl string, prefetchCount int, autoAck bool) (*RabbitMQ, error) {
-	rabbitmq := NewRabbitMQStruct(queueName, exchange, key, MqUrl, prefetchCount)
+func NewRabbitMQInstance(queueName string) (*RabbitMQ, error) {
+	rabbitmq := &RabbitMQ{}
 	var err error
-	rabbitmq.conn, err = amqp.Dial(rabbitmq.MqUrl)
+	rabbitmq.conn, err = amqp.Dial(GetMqUrl())
 	if err != nil {
 		return nil, err
 	}
@@ -53,14 +41,7 @@ func NewRabbitMQInstance(queueName, exchange, key, MqUrl string, prefetchCount i
 	if err != nil {
 		return nil, err
 	}
-	if !autoAck {
-		err = rabbitmq.channel.Qos(rabbitmq.prefetchCount, 0, false)
-		if err != nil {
-			return nil, err
-		}
-	}
-	rabbitmq.channel.NotifyClose(rabbitmq.notifyClose)
-	rabbitmq.channel.NotifyPublish(rabbitmq.notifyConfirm)
+	rabbitmq.queueName = queueName
 	return rabbitmq, nil
 }
 
@@ -77,8 +58,8 @@ func (r *RabbitMQ) Destroy() error {
 }
 
 func (r *RabbitMQ) PublishSimple(ctx context.Context, message []byte) error {
-	_, err := r.channel.QueueDeclare(
-		r.QueueName,
+	q, err := r.channel.QueueDeclare(
+		r.queueName,
 		false,
 		false,
 		false,
@@ -86,15 +67,12 @@ func (r *RabbitMQ) PublishSimple(ctx context.Context, message []byte) error {
 		nil,
 	)
 	if err != nil {
-		if r.conn.IsClosed() || r.channel.IsClosed() {
-			return errors.Wrap(err, "PublishSimple")
-		}
 		return err
 	}
 	err = r.channel.PublishWithContext(
 		ctx,
-		r.Exchange,
-		r.QueueName,
+		"",
+		q.Name,
 		false,
 		false,
 		amqp.Publishing{
@@ -112,17 +90,14 @@ func (r *RabbitMQ) PublishSimple(ctx context.Context, message []byte) error {
 }
 
 func (r *RabbitMQ) ConsumeSimple() (<-chan amqp.Delivery, error) {
-	q, err := r.channel.QueueDeclare(
-		r.QueueName,
+	q, _ := r.channel.QueueDeclare(
+		r.queueName,
 		false,
 		false,
 		false,
 		false,
 		nil,
 	)
-	if err != nil {
-		return nil, err
-	}
 	msgs, err := r.channel.Consume(
 		q.Name,
 		"",

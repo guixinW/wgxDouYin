@@ -3,7 +3,7 @@ package service
 import (
 	"crypto/ecdsa"
 	"wgxDouYin/pkg/keys"
-	rabbitmq "wgxDouYin/pkg/rabbitMQ"
+	"wgxDouYin/pkg/rabbitMQ"
 	"wgxDouYin/pkg/zap"
 )
 
@@ -15,9 +15,9 @@ var (
 
 func init() {
 	var err error
-	RelationMQ, err = rabbitmq.DefaultRabbitMQInstance("relation")
+	RelationMQ, err = rabbitmq.NewRabbitMQInstance("relation")
 	if err != nil {
-		panic(err)
+		logger.Errorln(err)
 	}
 }
 

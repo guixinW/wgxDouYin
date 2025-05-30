@@ -3,8 +3,8 @@ services:
     image: quay.io/minio/minio
     container_name: minio
     ports:
-      - "9000:9000"     # MinIO 对象存储 API
-      - "9001:9001"     # MinIO 控制台
+      - "9002:9000"     # MinIO 对象存储 API
+      - "9003:9001"     # MinIO 控制台
     volumes:
       - ./minio-data:/data    # 本地数据目录挂载到容器
     environment:

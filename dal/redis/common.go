@@ -81,18 +81,8 @@ func GetSetIntersection(ctx context.Context, key ...string) ([]string, error) {
 	return result, nil
 }
 
-func AddValueToKeySet(ctx context.Context, key string, value []string, mutex *redsync.Mutex) error {
-	err := mutex.LockContext(ctx)
-	defer func(mutex *redsync.Mutex, ctx context.Context) {
-		_, err := mutex.UnlockContext(ctx)
-		if err != nil {
-			logger.Errorln(err)
-		}
-	}(mutex, ctx)
-	if err != nil {
-		return ErrorWrap(err, "add key")
-	}
-	err = GetRedisHelper().SAdd(ctx, key, value).Err()
+func AddValueToKeySet(ctx context.Context, key string, value []string) error {
+	err := GetRedisHelper().SAdd(ctx, key, value).Err()
 	if err != nil {
 		return err
 	}
@@ -125,18 +115,8 @@ func IsValueExistInKeySet(ctx context.Context, key string, value string) (bool, 
 	return isExist, nil
 }
 
-func SetKeyValue(ctx context.Context, key string, value string, expireTime time.Time, mutex *redsync.Mutex) error {
-	err := mutex.LockContext(ctx)
-	defer func(mutex *redsync.Mutex, ctx context.Context) {
-		_, err := mutex.UnlockContext(ctx)
-		if err != nil {
-			logger.Errorln(err)
-		}
-	}(mutex, ctx)
-	if err != nil {
-		return ErrorWrap(err, "SetKeyValue")
-	}
-	_, err = GetRedisHelper().Set(ctx, key, value, time.Until(expireTime)).Result()
+func SetKeyValue(ctx context.Context, key string, value string, expireTime time.Time) error {
+	_, err := GetRedisHelper().Set(ctx, key, value, time.Until(expireTime)).Result()
 	if err != nil {
 		return ErrorWrap(err, "SetKeyValue")
 	}

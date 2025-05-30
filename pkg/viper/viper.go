@@ -17,6 +17,7 @@ func Init(configName string) Config {
 	v.AddConfigPath("./config")
 	v.AddConfigPath("../config")
 	v.AddConfigPath("../../config")
+	v.AddConfigPath("/app/config")
 	if err := v.ReadInConfig(); err != nil {
 		log.Fatalf("error is %v", err)
 	}

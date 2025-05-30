@@ -16,13 +16,10 @@ import (
 var (
 	config      = viper.Init("relation")
 	serviceName = config.Viper.GetString("service.name")
-	serviceAddr = fmt.Sprintf("%s:%d", config.Viper.GetString("service.host"),
-		config.Viper.GetInt("service.port"))
-	rpcAddr = fmt.Sprintf("%s:%d", config.Viper.GetString("rpc.host"),
-		config.Viper.GetInt("rpc.port"))
-	etcdAddr = fmt.Sprintf("%s:%d", config.Viper.GetString("etcd.host"),
-		config.Viper.GetInt("etcd.port"))
-	logger = zap.InitLogger()
+	serviceAddr = fmt.Sprintf("%s:%d", config.Viper.GetString("service.host"), config.Viper.GetInt("service.port"))
+	rpcAddr     = fmt.Sprintf("%s:%d", config.Viper.GetString("rpc.host"), config.Viper.GetInt("rpc.port"))
+	etcdAddr    = fmt.Sprintf("%s:%d", config.Viper.GetString("etcd.host"), config.Viper.GetInt("etcd.port"))
+	logger      = zap.InitLogger()
 )
 
 func errorHandler(err error, errMsg string) {

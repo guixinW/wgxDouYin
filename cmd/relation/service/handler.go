@@ -60,9 +60,6 @@ func (s *RelationServiceImpl) RelationAction(ctx context.Context, req *relation.
 		StatusCode: 0,
 		StatusMsg:  "success",
 	}
-	fmt.Printf("relation action created time:%v, relation action delete time:%v\n",
-		relationActionRecord.CreatedAt, relationActionRecord.DeletedAt)
-	//
 	if time.Now().Sub(relationActionRecord.CreatedAt) >= 24*time.Hour {
 		return res, nil
 	}
@@ -71,6 +68,7 @@ func (s *RelationServiceImpl) RelationAction(ctx context.Context, req *relation.
 		ToUserID:   req.ToUserId,
 		ActionType: req.ActionType,
 		CreatedAt:  relationActionRecord.CreatedAt,
+		UpdatedAt:  relationActionRecord.UpdatedAt,
 	}
 	relationCacheByte, err := json.Marshal(relationCache)
 	if err != nil {
@@ -78,7 +76,6 @@ func (s *RelationServiceImpl) RelationAction(ctx context.Context, req *relation.
 		return res, nil
 	}
 	if err := RelationMQ.PublishSimple(ctx, relationCacheByte); err != nil {
-		logger.Errorln(err)
 		return res, nil
 	}
 	return res, nil

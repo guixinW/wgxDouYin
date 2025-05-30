@@ -1,6 +1,8 @@
-package redisDAO
+package relatioDAO
 
-import "wgxDouYin/pkg/zap"
+import (
+	"wgxDouYin/pkg/zap"
+)
 
 var (
 	logger = zap.InitLogger()

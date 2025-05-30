@@ -8,8 +8,14 @@ server:
 
 consumer:
   favorite:
+    queueName: favorite
     autoAck: true
-    prefetchCount: 1000
+    prefetchCount: 100
   relation:
+    queueName: relation
     autoAck: true
-    prefetchCount: 1000
+    prefetchCount: 100
+  user:
+    queueName: user
+    autoAck: true
+    prefetchCount: 100

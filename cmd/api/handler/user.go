@@ -94,7 +94,7 @@ func UserInform(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse("非法的query_user_id"))
 	}
-	tokenUserId, exist := c.Get("query_user_id")
+	tokenUserId, exist := c.Get("token_user_id")
 	if !exist {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse("请求非法"))
 		return
@@ -105,11 +105,11 @@ func UserInform(c *gin.Context) {
 	}
 	res, err := rpc.UserInform(c, req)
 	if res == nil || err != nil {
-		c.JSON(http.StatusOK, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
+		c.JSON(http.StatusBadRequest, response.ErrorResponse(fmt.Sprintf("服务端请求错误:%v\n", err)))
 		return
 	}
 	if res.StatusCode == -1 {
-		c.JSON(http.StatusOK, response.ErrorResponse(res.StatusMsg))
+		c.JSON(http.StatusBadRequest, response.ErrorResponse(res.StatusMsg))
 		return
 	}
 	c.JSON(http.StatusOK, response.UserInform{
@@ -125,7 +125,6 @@ func RefreshToken(c *gin.Context) {
 	userId, _ := c.Get("token_user_id")
 	refreshToken, _ := c.Get("refresh_token")
 	deviceId := c.Query("device_id")
-	fmt.Printf("refresh, user_id:%v, refresh_token:%v, deviceId:%v\n", userId, refreshToken, deviceId)
 	req := &userGrpc.AccessTokenRequest{
 		UserId:       userId.(uint64),
 		RefreshToken: refreshToken.(string),

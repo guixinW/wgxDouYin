@@ -130,7 +130,7 @@ func (s *UserServiceImpl) Login(ctx context.Context, req *user.UserLoginRequest)
 			StatusCode: -1,
 			StatusMsg:  "用户名或密码错误",
 		}
-		return res, nil
+		return res, err
 	}
 
 	//3.签发token
@@ -157,7 +157,7 @@ func (s *UserServiceImpl) Login(ctx context.Context, req *user.UserLoginRequest)
 			StatusCode: -1,
 			StatusMsg:  "服务器内部错误：token 创建失败",
 		}
-		return res, nil
+		return res, err
 	}
 	accessToken, err := myJwt.CreateToken(KeyManager.GetPrivateKey(), accessClaims)
 	if err != nil {
@@ -166,7 +166,7 @@ func (s *UserServiceImpl) Login(ctx context.Context, req *user.UserLoginRequest)
 			StatusCode: -1,
 			StatusMsg:  "服务器内部错误：token 创建失败",
 		}
-		return res, nil
+		return res, err
 	}
 	refreshTokenHashed := tool.GenerateHashOfLength64(refreshToken)
 	if err := db.UpdateDeviceIdAndRefreshToken(ctx, usr, req.DeviceId, refreshTokenHashed); err != nil {
@@ -175,7 +175,7 @@ func (s *UserServiceImpl) Login(ctx context.Context, req *user.UserLoginRequest)
 			StatusCode: -1,
 			StatusMsg:  "登陆失败",
 		}
-		return res, nil
+		return res, err
 	}
 
 	//4.返回token
@@ -186,7 +186,7 @@ func (s *UserServiceImpl) Login(ctx context.Context, req *user.UserLoginRequest)
 		RefreshToken: refreshToken,
 		AccessToken:  accessToken,
 	}
-	return res, nil
+	return res, err
 }
 
 // UserInfo 接收一个包含tokenUserId、queryUserID的rpc请求。返回queryUserID的信息
@@ -195,9 +195,6 @@ func (s *UserServiceImpl) UserInfo(ctx context.Context, req *user.UserInfoReques
 	//用户查看自身信息与查看其他用户信息需要区分开，
 	//A.用户查看自身信息通过MySQL查询详细信息，包含favorite_count、dislike_count（其他用户查询则不包含）
 	//B.用户查看其他用户信息通过Redis查询该用户是否为热点用户，如果是则直接返回Redis中的数据，如果不是则查询MySQL
-	//查询步骤：
-	//1.先通过Redis查看用户是否为热点用户，如果是则直接使用Redis
-	//2.如果是
 	if req.QueryUserId == req.TokenUserId {
 		return querySelf(ctx, req.QueryUserId)
 	}

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"net/http"
@@ -23,7 +22,6 @@ func RefreshTokenMiddleware(serviceDependencyMap map[string]string, keys *keys.K
 			response.AbortWithError(c, http.StatusUnauthorized, response.StatusOther, err.Error())
 		}
 		RefreshToken, err := c.Cookie("refresh_token")
-		fmt.Printf("refresh_token:%v\n", RefreshToken)
 		if err != nil || RefreshToken == "" {
 			response.AbortWithError(c, http.StatusUnauthorized, response.StatusOther, "refresh token is nil")
 			return

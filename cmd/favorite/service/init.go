@@ -15,7 +15,7 @@ var (
 
 func init() {
 	var err error
-	FavoriteMQ, err = rabbitmq.DefaultRabbitMQInstance("favorite")
+	FavoriteMQ, err = rabbitmq.NewRabbitMQInstance("favorite")
 	if err != nil {
 		panic(err)
 	}

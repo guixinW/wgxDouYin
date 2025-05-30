@@ -1,4 +1,4 @@
-package redisDAO
+package favoriteDAO
 
 import (
 	"context"
@@ -24,14 +24,14 @@ func UpdateFavorite(ctx context.Context, favoriteCache *FavoriteCache) error {
 	keyFavorite := fmt.Sprintf("video::%d::user::%d", favoriteCache.VideoID, favoriteCache.UserID)
 	valueFavorite := fmt.Sprintf("%d::%d", favoriteCache.CreatedAt.UnixMilli(), favoriteCache.ActionType)
 	videoLikeSet := fmt.Sprintf("videoLike::%d", favoriteCache.VideoID)
-	expireTime := favoriteCache.CreatedAt.Add(wgxRedis.ExpireTime)
+	expireTime := favoriteCache.CreatedAt.Add(wgxRedis.KeyExpireTime)
 
 	addAction := func() error {
 		err := wgxRedis.IncrNumInZSet(ctx, videoRankName, fmt.Sprintf("%v", favoriteCache.VideoID), 1, wgxRedis.FavoriteMutex)
 		if err != nil {
 			return err
 		}
-		err = wgxRedis.AddValueToKeySet(ctx, videoLikeSet, []string{strconv.Itoa(int(favoriteCache.UserID))}, wgxRedis.FavoriteMutex)
+		err = wgxRedis.AddValueToKeySet(ctx, videoLikeSet, []string{strconv.Itoa(int(favoriteCache.UserID))})
 		if err != nil {
 			return wgxRedis.ErrorWrap(err, "UpdateRelation set following error")
 		}
@@ -55,7 +55,7 @@ func UpdateFavorite(ctx context.Context, favoriteCache *FavoriteCache) error {
 		return wgxRedis.ErrorWrap(err, "UpdateFavorite KeyExist error")
 	}
 	if !keyExisted {
-		err := wgxRedis.SetKeyValue(ctx, keyFavorite, valueFavorite, expireTime, wgxRedis.FavoriteMutex)
+		err := wgxRedis.SetKeyValue(ctx, keyFavorite, valueFavorite, expireTime)
 		if err != nil {
 			return wgxRedis.ErrorWrap(err, "UpdateFavorite set read key error")
 		}
@@ -82,7 +82,7 @@ func UpdateFavorite(ctx context.Context, favoriteCache *FavoriteCache) error {
 		}
 		if favoriteCache.CreatedAt.After(existFavoriteCreatedAt) {
 			fmt.Println("update")
-			err := wgxRedis.SetKeyValue(ctx, keyFavorite, valueFavorite, expireTime, wgxRedis.FavoriteMutex)
+			err := wgxRedis.SetKeyValue(ctx, keyFavorite, valueFavorite, expireTime)
 			if err != nil {
 				return wgxRedis.ErrorWrap(err, "UpdateRelation")
 			}

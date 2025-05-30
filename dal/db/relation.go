@@ -2,24 +2,27 @@ package db
 
 import (
 	"context"
-	"fmt"
-	"github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"gorm.io/plugin/dbresolver"
+	"time"
 )
 
 type FollowRelation struct {
 	gorm.Model
-	User     User   `gorm:"foreignkey:UserID;" json:"user,omitempty"`
-	UserID   uint64 `gorm:"index:idx_userid;not null" json:"user_id"`
-	ToUser   User   `gorm:"foreignkey:ToUserID;" json:"to_user,omitempty"`
-	ToUserID uint64 `gorm:"index:idx_userid;index:idx_userid_to;not null" json:"to_user_id"`
+	User     User   `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	UserID   uint64 `gorm:"uniqueIndex:unique_user_relation;not null" json:"user_id"`
+	ToUser   User   `gorm:"foreignKey:ToUserID" json:"to_user,omitempty"`
+	ToUserID uint64 `gorm:"uniqueIndex:unique_user_relation;not null" json:"to_user_id"`
 }
 
-func (FollowRelation) TableName() string {
+func (f *FollowRelation) TableName() string {
 	return "relations"
+}
+
+func (f *FollowRelation) BeforeDelete(tx *gorm.DB) (err error) {
+	tx.Model(f).Update("updated_at", time.Now())
+	return nil
 }
 
 func GetRelationByUserIDs(ctx context.Context, userId uint64, toUserID uint64) (*FollowRelation, error) {
@@ -35,30 +38,30 @@ func GetRelationByUserIDs(ctx context.Context, userId uint64, toUserID uint64) (
 
 func CreateRelation(ctx context.Context, followRelation *FollowRelation) error {
 	err := GetDB().Clauses(dbresolver.Write).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		createRes := tx.Clauses(clause.OnConflict{
-			Columns: []clause.Column{{Name: "user_id"}, {Name: "to_user_id"}},
-			DoUpdates: clause.Assignments(map[string]interface{}{
-				"deleted_at": nil,
-			}),
-		}).Create(followRelation)
-
-		//判断是否出现错误以及是否未正常插入
-		if createRes.Error != nil {
-			var mysqlErr *mysql.MySQLError
-			if errors.As(createRes.Error, &mysqlErr) {
-				if mysqlErr.Number == 1452 {
-					return errors.New("关注的用户不存在")
+		res := tx.Unscoped().Where("user_id = ? AND to_user_id = ?", followRelation.UserID, followRelation.ToUserID).First(followRelation)
+		if res.Error == nil {
+			if followRelation.DeletedAt.Valid {
+				updateRes := tx.Model(followRelation).Unscoped().Where("id = ?", followRelation.ID).Updates(map[string]interface{}{
+					"deleted_at": nil,
+					"updated_at": time.Now(),
+				})
+				if updateRes.Error != nil {
+					return updateRes.Error
 				}
+			} else {
+				return errors.New("已经关注该用户")
 			}
-			return createRes.Error
-		}
-		fmt.Printf("createRes.RowsAffected:%v\n", createRes.RowsAffected)
-		if createRes.RowsAffected == 0 {
-			return errors.New("重复关注")
+		} else if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			createRes := tx.Create(followRelation)
+			if createRes.Error != nil {
+				return createRes.Error
+			}
+		} else {
+			return res.Error
 		}
 
 		//更改被关注人的follower_count以及关注人的following_count
-		res := tx.Model(&User{}).Where("id = ?", followRelation.UserID).Update("following_count", gorm.Expr("following_count + ?", 1))
+		res = tx.Model(&User{}).Where("id = ?", followRelation.UserID).Update("following_count", gorm.Expr("following_count + ?", 1))
 		if res.Error != nil {
 			return res.Error
 		}
@@ -79,12 +82,16 @@ func CreateRelation(ctx context.Context, followRelation *FollowRelation) error {
 
 func DelRelationByUserID(ctx context.Context, followRelation *FollowRelation) error {
 	err := GetDB().Clauses(dbresolver.Write).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		res := tx.Where("user_id=? and to_user_id=?", followRelation.UserID, followRelation.ToUserID).Delete(followRelation)
+		err := tx.Where("user_id=? and to_user_id=?", followRelation.UserID, followRelation.ToUserID).First(followRelation).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("不能取关你未关注的人")
+			}
+			return err
+		}
+		res := tx.Delete(followRelation)
 		if res.Error != nil {
 			return res.Error
-		}
-		if res.RowsAffected == 0 {
-			return errors.New("不能取关你未关注的人")
 		}
 		res = tx.Model(&User{}).Where("id = ?", followRelation.UserID).Update("following_count", gorm.Expr("following_count - ?", 1))
 		if res.Error != nil {

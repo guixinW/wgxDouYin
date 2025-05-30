@@ -1,4 +1,4 @@
-package redisDAO
+package favoriteDAO
 
 import "wgxDouYin/pkg/zap"
 
