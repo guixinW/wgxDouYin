@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"time"
-	"wgxDouYin/cmd/favorite/redisDAO"
+	redisDAO "wgxDouYin/cmd/favorite/redisDAO"
 	"wgxDouYin/dal/db"
 	"wgxDouYin/grpc/favorite"
 )

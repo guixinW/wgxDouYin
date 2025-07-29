@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"wgxDouYin/cmd/favorite/redisDAO"
+	redisDAO "wgxDouYin/cmd/favorite/redisDAO"
 	rabbitmq "wgxDouYin/pkg/rabbitMQ"
 )
 

@@ -3,9 +3,8 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
-	"wgxDouYin/cmd/relation/redisDAO"
+	redisDAO "wgxDouYin/cmd/relation/redisDAO"
 	"wgxDouYin/dal/db"
 	"wgxDouYin/grpc/relation"
 	"wgxDouYin/grpc/user"
@@ -188,7 +187,6 @@ func (s *RelationServiceImpl) RelationFriendList(ctx context.Context, req *relat
 		}
 		return res, nil
 	}
-	fmt.Println(friendIds)
 	friendList := make([]*relation.FriendUser, 0, len(friendIds))
 	for _, friendId := range friendIds {
 		friendFollowerCount, followerErr := redisDAO.GetFollowerCount(ctx, friendId)
@@ -200,7 +198,6 @@ func (s *RelationServiceImpl) RelationFriendList(ctx context.Context, req *relat
 			}
 			return res, nil
 		}
-		fmt.Println(friendId, friendFollowerCount, friendFollowerCount)
 		friendList = append(friendList, &relation.FriendUser{
 			User: &user.User{
 				Id:             friendId,
